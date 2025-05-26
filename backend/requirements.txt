@@ -1,0 +1,3 @@
+fastapi
+uvicorn[standard]
+# Add other dependencies like sqlmodel, psycopg2-binary, alembic, passlib, python-jose, etc. as needed

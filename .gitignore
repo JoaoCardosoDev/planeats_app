@@ -101,10 +101,10 @@ secrets/
 
 # Pre-commit
 .secrets.baseline # For detect-secrets hook
-.memory-bank
+memory-bank/
+.clinerules/
 
 # Operating System files
 Thumbs.db
 ehthumbs.db
 Desktop.ini
-

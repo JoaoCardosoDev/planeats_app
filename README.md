@@ -18,8 +18,8 @@ This project is being developed as part of the Projeto II - Programação Web 23
 
 1.  **Clone the repository** (if you haven't already):
     ```bash
-    # git clone <repository-url>
-    # cd planeats_app
+    git clone https://github.com/JoaoCardosoDev/planeats_app
+    cd planeats_app
     ```
 
 2.  **Create your local environment file**:

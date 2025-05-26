@@ -1,0 +1,110 @@
+# General
+.DS_Store
+*.log
+*.tmp
+*.swp
+*.swo
+*~
+*.bak
+*.orig
+
+# IDE - VSCode
+.vscode/
+
+# IDE - JetBrains (PyCharm, WebStorm, etc.)
+.idea/
+*.iml
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+*.manifest
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.hypothesis/
+.pytest_cache/
+celerybeat-schedule
+*.pid
+*.pid.lock
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# FastAPI / Uvicorn
+# No specific files usually, but .env is covered above
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+build/ # Can conflict with Python build, but usually Next.js build is in .next or out
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnp/
+.pnp.js
+.env*.local
+.env.development.local
+.env.test.local
+.env.production.local
+coverage/ # Jest/Vitest coverage
+
+# Database (if local files are generated, e.g. SQLite, though we use PostgreSQL)
+*.sqlite3
+*.db
+
+# Secrets (already covered by .env, but good to be explicit if other patterns arise)
+secrets/
+*.pem
+*.key
+
+# Alembic (migrations) - cache files
+# alembic/versions/ # Keep versions, but ignore temp files if any
+
+# Pre-commit
+.secrets.baseline # For detect-secrets hook
+.memory-bank
+
+# Operating System files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+

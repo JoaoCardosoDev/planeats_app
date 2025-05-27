@@ -15,6 +15,7 @@ WORKDIR /usr/src/app
 COPY --from=builder /usr/src/app/.next ./.next
 COPY --from=builder /usr/src/app/public ./public
 COPY --from=builder /usr/src/app/package.json ./package.json
+COPY --from=builder /usr/src/app/node_modules ./node_modules
 # next.config.js might not exist initially for a barebones Next.js app,
 # but it's good to include if planned.
 # If it's optional, the COPY command might fail if the file doesn't exist in builder.

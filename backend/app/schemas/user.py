@@ -33,3 +33,15 @@ class UserLogin(BaseModel):
     """Schema for user login request"""
     email: EmailStr = Field(..., description="User's email address")
     password: str = Field(..., description="User's password")
+
+
+class UserLoginResponse(BaseModel):
+    """Schema for user login response - compatible with NextAuth.js"""
+    id: int
+    email: str
+    username: str
+    access_token: str
+    token_type: str = "bearer"
+
+    class Config:
+        from_attributes = True

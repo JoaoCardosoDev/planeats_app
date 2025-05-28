@@ -37,9 +37,10 @@ async def get_current_user(
             algorithms=[settings.algorithm]
         )
         email: str = payload.get("sub")
+        user_id: int = payload.get("user_id")
         if email is None:
             raise credentials_exception
-        token_data = TokenData(email=email)
+        token_data = TokenData(email=email, user_id=user_id)
     except JWTError:
         raise credentials_exception
     
@@ -76,6 +77,7 @@ def get_current_user_optional(
             algorithms=[settings.algorithm]
         )
         email: str = payload.get("sub")
+        user_id: int = payload.get("user_id")
         if email is None:
             return None
         

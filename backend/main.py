@@ -1,43 +1,58 @@
-from fastapi import FastAPI, Depends, HTTPException
-from sqlmodel import create_engine, Session, select
-from sqlalchemy.exc import OperationalError
-import os
-from dotenv import load_dotenv
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 
-load_dotenv()
+from app.core.config import settings
+from app.db.session import create_db_and_tables
+from app.api.v1 import api_router
+from app.models import User  # Import models for table creation
 
-DATABASE_URL = os.getenv("DATABASE_URL")
 
-if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL not set in .env file")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    yield
+    # Shutdown
 
-engine = create_engine(DATABASE_URL)
 
-app = FastAPI(title="PlanEats API", version="0.1.0")
+app = FastAPI(
+    title=settings.app_name,
+    version=settings.app_version,
+    description="PlanEats API for pantry management and recipe recommendations",
+    lifespan=lifespan,
+    openapi_url="/api/v1/openapi.json",
+    docs_url="/docs",
+    redoc_url="/redoc"
+)
 
-def get_session():
-    with Session(engine) as session:
-        yield session
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.allowed_hosts,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Include API routes
+app.include_router(api_router, prefix="/api/v1")
+
 
 @app.get("/")
 async def root():
-    return {"message": "PlanEats Backend is running!"}
+    return {"message": "PlanEats Backend is running!", "version": settings.app_version}
 
-@app.get("/health/db", tags=["Health Check"])
-async def db_health_check(session: Session = Depends(get_session)):
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
+
+
+@app.post("/init-db")
+async def initialize_database():
+    """Initialize database tables - call this once after startup"""
     try:
-        # Try to execute a simple query
-        session.exec(select(1)).first()
-        return {"status": "success", "message": "Database connection is healthy."}
-    except OperationalError as e:
-        raise HTTPException(
-            status_code=503,
-            detail=f"Database connection error: {e}",
-        )
+        create_db_and_tables()
+        return {"message": "Database initialized successfully"}
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"An unexpected error occurred with the database connection: {e}",
-        )
-
-# Further routers and application logic will be added here.
+        return {"error": f"Failed to initialize database: {str(e)}"}

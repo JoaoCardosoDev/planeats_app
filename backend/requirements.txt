@@ -3,4 +3,6 @@ uvicorn[standard]
 sqlmodel
 psycopg2-binary
 python-dotenv
-# alembic, passlib, python-jose[cryptography] will be added as part of US6.1 and authentication user stories
+alembic
+passlib[bcrypt]
+python-jose[cryptography]

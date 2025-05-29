@@ -6,3 +6,9 @@ python-dotenv
 alembic
 passlib[bcrypt]
 python-jose[cryptography]
+pytest
+pydantic-settings
+httpx
+pydantic[email]
+python-multipart
+pytest-cov

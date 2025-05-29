@@ -7,17 +7,15 @@ from sqlmodel import Session
 from app.core.config import settings
 from app.core.security import verify_token
 from app.crud.crud_user import user as crud_user
-from app.db.session import get_session
-from app.models.user import User
+from app.db.session import get_db_session
+from app.models import User
 from app.schemas.token import TokenData
 
 security = HTTPBearer()
 
-
 def get_db() -> Generator[Session, None, None]:
     """Database session dependency"""
-    yield from get_session()
-
+    yield from get_db_session()
 
 async def get_current_user(
     db: Session = Depends(get_db),
@@ -33,8 +31,8 @@ async def get_current_user(
     try:
         payload = jwt.decode(
             credentials.credentials, 
-            settings.secret_key, 
-            algorithms=[settings.algorithm]
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM]
         )
         email: str = payload.get("sub")
         user_id: int = payload.get("user_id")
@@ -49,7 +47,6 @@ async def get_current_user(
         raise credentials_exception
     return user
 
-
 async def get_current_active_user(
     current_user: User = Depends(get_current_user),
 ) -> User:
@@ -60,7 +57,6 @@ async def get_current_active_user(
             detail="Inactive user"
         )
     return current_user
-
 
 def get_current_user_optional(
     db: Session = Depends(get_db),
@@ -73,8 +69,8 @@ def get_current_user_optional(
     try:
         payload = jwt.decode(
             credentials.credentials, 
-            settings.secret_key, 
-            algorithms=[settings.algorithm]
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM]
         )
         email: str = payload.get("sub")
         user_id: int = payload.get("user_id")

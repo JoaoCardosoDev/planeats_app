@@ -8,7 +8,7 @@ from app.api.v1.deps import get_db, get_current_active_user
 from app.core.config import settings
 from app.core.security import create_access_token
 from app.crud.crud_user import user as crud_user
-from app.models.user import User
+from app.models import User
 from app.schemas.user import UserCreate, UserRead, UserLogin, UserLoginResponse
 from app.schemas.token import Token
 
@@ -30,21 +30,18 @@ def register_user(
     
     Returns the created user data (excluding password)
     """
-    # Check if email already exists
     if crud_user.is_email_taken(db, email=user_in.email):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered"
         )
     
-    # Check if username already exists
     if crud_user.is_username_taken(db, username=user_in.username):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Username already taken"
         )
     
-    # Create new user
     user = crud_user.create(db, obj_in=user_in)
     return user
 
@@ -72,7 +69,7 @@ def login_user(
             detail="Inactive user"
         )
     
-    access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": user.email, "user_id": user.id}, expires_delta=access_token_expires
     )
@@ -108,7 +105,7 @@ def login_oauth2(
             detail="Inactive user"
         )
     
-    access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": user.email, "user_id": user.id}, expires_delta=access_token_expires
     )

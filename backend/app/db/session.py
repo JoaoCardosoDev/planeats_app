@@ -23,7 +23,6 @@ def create_db_and_tables():
     # SQLModel.metadata.create_all(engine)
     print("Database and tables creation logic (if not using Alembic exclusively) would be here.")
     print("With Alembic, this function might not be necessary for production.")
-
 # To be called by Alembic's env.py to get the engine
 def get_engine():
     return engine

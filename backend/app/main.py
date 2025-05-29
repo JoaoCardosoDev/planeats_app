@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from app.core.config import settings
 from app.db.session import create_db_and_tables
 from app.api.v1 import api_router
-from app.models import User  # Import models for table creation
+from app.models import User
 
 
 @asynccontextmanager
@@ -16,8 +16,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title=settings.app_name,
-    version=settings.app_version,
+    title=settings.PROJECT_NAME,
+    version=settings.APP_VERSION,
     description="PlanEats API for pantry management and recipe recommendations",
     lifespan=lifespan,
     openapi_url="/api/v1/openapi.json",
@@ -28,7 +28,7 @@ app = FastAPI(
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.allowed_hosts,
+    allow_origins=settings.ALLOWED_HOSTS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -40,7 +40,7 @@ app.include_router(api_router, prefix="/api/v1")
 
 @app.get("/")
 async def root():
-    return {"message": "PlanEats Backend is running!", "version": settings.app_version}
+    return {"message": "PlanEats Backend is running!", "version": settings.APP_VERSION}  # Corrected attribute
 
 
 @app.get("/health")

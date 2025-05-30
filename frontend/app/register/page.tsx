@@ -1,8 +1,10 @@
-'use client'; 
+'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -25,24 +27,31 @@ export default function RegisterPage() {
       return;
     }
 
-    // A chamada à API (fetch) virá aqui quando o backend estiver pronto
-    // Exemplo:
-    // try {
-    //   const response = await fetch('http://localhost:8000/auth/register', {
-    //     method: 'POST',
-    //     headers: { 'Content-Type': 'application/json' },
-    //     body: JSON.stringify({ username, email, password }),
-    //   });
-    //   const data = await response.json();
-    //   if (response.ok) {
-    //     setSuccess('Registo efetuado com sucesso!');
-    //     // Redirecionar para login
-    //   } else {
-    //     setError(data.detail || 'Erro ao registar.');
-    //   }
-    // } catch (err) {
-    //   setError('Erro de conexão.');
-    // }
+    try {
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${apiBaseUrl}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, email, password }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setSuccess('Registo efetuado com sucesso! Redirecionando para login...');
+        // Clear form
+        setUsername('');
+        setEmail('');
+        setPassword('');
+        setConfirmPassword('');
+        setTimeout(() => {
+          router.push('/login');
+        }, 2000); // Redirect after 2 seconds
+      } else {
+        setError(data.detail || `Erro ${response.status}: Falha ao registar.`);
+      }
+    } catch (err) {
+      console.error('Registration error:', err);
+      setError('Erro de conexão ou falha ao contactar o servidor.');
+    }
   };
 
   return (

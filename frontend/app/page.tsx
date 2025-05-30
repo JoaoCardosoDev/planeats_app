@@ -229,8 +229,8 @@ export default function Home() {
                     ))}
                   </div>
                   <p className="italic">
-                    "O PlanEats revolucionou minha forma de cozinhar. Agora consigo aproveitar todos os ingredientes da
-                    minha geladeira e descobrir receitas incríveis!"
+                    &quot;O PlanEats revolucionou minha forma de cozinhar. Agora consigo aproveitar todos os ingredientes da
+                    minha geladeira e descobrir receitas incríveis!&quot;
                   </p>
                   <div className="flex items-center gap-3 mt-2">
                     <Avatar className="h-10 w-10">
@@ -254,8 +254,8 @@ export default function Home() {
                     ))}
                   </div>
                   <p className="italic">
-                    "Reduzi o desperdício de alimentos em casa em mais de 70% desde que comecei a usar o PlanEats. As
-                    receitas são deliciosas e fáceis de preparar!"
+                    &quot;Reduzi o desperdício de alimentos em casa em mais de 70% desde que comecei a usar o PlanEats. As
+                    receitas são deliciosas e fáceis de preparar!&quot;
                   </p>
                   <div className="flex items-center gap-3 mt-2">
                     <Avatar className="h-10 w-10">
@@ -279,8 +279,8 @@ export default function Home() {
                     ))}
                   </div>
                   <p className="italic">
-                    "Como estudante, o PlanEats me ajuda a economizar dinheiro e tempo. Consigo preparar refeições
-                    deliciosas com o que tenho disponível!"
+                    &quot;Como estudante, o PlanEats me ajuda a economizar dinheiro e tempo. Consigo preparar refeições
+                    deliciosas com o que tenho disponível!&quot;
                   </p>
                   <div className="flex items-center gap-3 mt-2">
                     <Avatar className="h-10 w-10">

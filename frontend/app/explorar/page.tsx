@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/sheet"
 
 export default function Explorar() {
-  const [showFilters, setShowFilters] = useState(false)
+  // const [showFilters, setShowFilters] = useState(false) // Commented out as per ESLint error: 'showFilters' and 'setShowFilters' are assigned a value but never used.
 
   return (
     <div className="container py-8">

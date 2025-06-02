@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session
-from typing import List, Optional
+from typing import List
 
 from app.api.v1.deps import get_current_user, get_db
 from app.models.recipe_models import RecipeCreate, RecipeRead

@@ -23,10 +23,11 @@ def create_db_and_tables():
     # This function is generally not used with Alembic,
     # as Alembic handles table creation and migrations.
     # However, it can be useful for initial setup or testing without Alembic.
-    # from app.models import user_model # Import your models here
-    # SQLModel.metadata.create_all(engine)
-    print("Database and tables creation logic (if not using Alembic exclusively) would be here.")
-    print("With Alembic, this function might not be necessary for production.")
+    from app.models import User  # Import User model
+    from app.models import PantryItem, Recipe, RecipeIngredient, UserPreference # Import other models
+    from sqlmodel import SQLModel # Import SQLModel
+    SQLModel.metadata.create_all(engine)
+    print("Database and tables created via SQLModel.metadata.create_all(engine).")
 # To be called by Alembic's env.py to get the engine
 def get_engine():
     return engine

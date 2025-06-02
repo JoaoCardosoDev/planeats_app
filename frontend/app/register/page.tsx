@@ -12,6 +12,13 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Eye, EyeOff } from "lucide-react"
 
+// Define an interface for the Pydantic error detail objects
+interface PydanticErrorDetail {
+  loc: (string | number)[];
+  msg: string;
+  type: string; // Pydantic errors also often include a 'type'
+}
+
 export default function Cadastro() {
   const [showPassword, setShowPassword] = useState(false)
   const [username, setUsername] = useState("") // Changed from name to username
@@ -63,11 +70,22 @@ export default function Cadastro() {
           router.push('/login'); 
         }, 2000);
       } else {
-        setError(data.detail || `Erro ${response.status}: Falha ao registar.`);
+        console.error("Registration API error response:", data); // Log the full error data
+        let errorMessage = `Erro ${response.status}: Falha ao registar.`;
+        if (data && data.detail) {
+          // If data.detail is an array (FastAPI validation errors)
+          if (Array.isArray(data.detail)) {
+            errorMessage = data.detail.map((err: PydanticErrorDetail) => `${err.loc.join(' -> ')}: ${err.msg}`).join('; ');
+          } else { // If data.detail is a string
+            errorMessage = data.detail;
+          }
+        }
+        setError(errorMessage);
       }
-    } catch (err) {
-      console.error('Registration error:', err);
-      setError('Erro de conexão ou falha ao contactar o servidor.');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (err: any) {
+      console.error('Registration error (raw):', err); 
+      setError('Ocorreu um erro inesperado durante o registo. Por favor, tente novamente.');
     }
   }
 

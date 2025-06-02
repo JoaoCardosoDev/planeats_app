@@ -11,6 +11,7 @@ from app.models import User
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
+    create_db_and_tables()  # Ensure tables are created on startup
     yield
     # Shutdown
 

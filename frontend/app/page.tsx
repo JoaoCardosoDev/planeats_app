@@ -2,17 +2,21 @@
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { CheckCircle2, ChefHat, ClipboardList, Clock, Star } from "lucide-react"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import Image from "next/image"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { CheckCircle2, ChefHat, ClipboardList, Clock, Star } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import AuthStatus from "@/components/auth/AuthStatus"; // Import AuthStatus
 
 export default function Home() {
-  const router = useRouter()
+  const router = useRouter();
 
   return (
     <div className="flex flex-col min-h-screen bg-green-50">
+      <div className="container mx-auto p-4"> {/* Added a container for AuthStatus */}
+        <AuthStatus /> {/* Added AuthStatus component */}
+      </div>
 
       {/* Hero Section */}
       <section className="py-16 md:py-24 bg-green-50">

@@ -1,5 +1,6 @@
 from typing import List
-from sqlalchemy.orm import Session, select
+from sqlalchemy.orm import Session
+from sqlmodel import select
 from app.crud.base import CRUDBase
 from app.models.pantry_models import PantryItem, PantryItemCreate, PantryItemUpdate
 

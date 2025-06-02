@@ -5,7 +5,7 @@ from typing import List
 from app.api.v1.deps import get_current_user, get_db
 from app.models.recipe_models import RecipeCreate, RecipeRead
 from app.crud.crud_recipe import recipe as crud_recipe
-from app.models.user import User
+from app.models.user_models import User
 
 router = APIRouter()
 

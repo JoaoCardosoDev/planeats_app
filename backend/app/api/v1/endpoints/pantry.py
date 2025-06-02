@@ -5,7 +5,7 @@ from typing import List
 from app.api.v1.deps import get_current_user, get_db
 from app.models.pantry_models import PantryItemCreate, PantryItemRead
 from app.crud.crud_pantry import pantry as crud_pantry
-from app.models.user import User
+from app.models.user_models import User
 
 router = APIRouter()
 

@@ -49,25 +49,21 @@ def test_gemini_service():
         )
         
         if result["success"]:
-            print("Recipe generation successful!")
+            print("PASS: Recipe generation successful")
             print(f"Recipe Name: {result['recipe'].recipe_name}")
             print(f"Prep Time: {result['recipe'].preparation_time_minutes} minutes")
             print(f"Calories: {result['recipe'].estimated_calories}")
-            print(f"Instructions: {result['recipe'].instructions[:100]}...")
             print(f"Ingredients: {len(result['recipe'].ingredients)} items")
-            for ingredient in result['recipe'].ingredients:
-                print(f"  - {ingredient.quantity} {ingredient.unit} {ingredient.name}")
         else:
-            print(f"Recipe generation failed: {result.get('error', 'Unknown error')}")
+            print(f"FAIL: Recipe generation failed: {result.get('error', 'Unknown error')}")
             
     except Exception as e:
-        print(f"Test failed with exception: {str(e)}")
+        print(f"FAIL: Test failed with exception: {str(e)}")
 
 def test_endpoint_structure():
     """Test the endpoint structure without authentication"""
-    print("\ Testing API Endpoint Structure...")
+    print("\nTesting API Endpoint Structure...")
     
-    # Test that endpoint exists and requires authentication
     try:
         response = requests.post(
             "http://localhost:8000/api/v1/ai/custom-recipes",
@@ -80,21 +76,18 @@ def test_endpoint_structure():
         )
         
         if response.status_code == 403:
-            print("Endpoint exists and authentication is working")
+            print("PASS: Endpoint exists and authentication is working")
         else:
-            print(f"Unexpected response: {response.status_code}")
+            print(f"FAIL: Unexpected response: {response.status_code}")
             
     except requests.exceptions.ConnectionError:
-        print("Could not connect to backend - make sure it's running")
+        print("FAIL: Could not connect to backend - make sure it's running")
     except Exception as e:
-        print(f"Endpoint test failed: {str(e)}")
+        print(f"FAIL: Endpoint test failed: {str(e)}")
 
 if __name__ == "__main__":
     print("PlanEats Custom Recipe Generation Test")
     print("=" * 50)
     
-    # Test the Gemini service directly
     test_gemini_service()
-    
-    # Test the endpoint structure
     test_endpoint_structure()

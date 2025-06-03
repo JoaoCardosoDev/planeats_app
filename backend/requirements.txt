@@ -11,4 +11,5 @@ pydantic-settings
 httpx
 pydantic[email]
 python-multipart
+google-generativeai==0.5.4
 pytest-cov

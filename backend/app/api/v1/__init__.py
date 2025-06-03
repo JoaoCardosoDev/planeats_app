@@ -11,3 +11,5 @@ api_router.include_router(auth_router, prefix="/auth", tags=["authentication"])
 api_router.include_router(pantry_router, prefix="/pantry", tags=["pantry"])
 api_router.include_router(recipes_router, prefix="/recipes", tags=["recipes"])
 api_router.include_router(gemini_router, prefix="/gemini", tags=["gemini"])
+# Add AI prefix for Gemini endpoints to match user story specification
+api_router.include_router(gemini_router, prefix="/ai", tags=["ai"])

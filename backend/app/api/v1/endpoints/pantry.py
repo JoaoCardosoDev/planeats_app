@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
 from typing import List
 
 from app.api.v1.deps import get_current_user, get_db
-from app.models.pantry_models import PantryItemCreate, PantryItemRead
+from app.models.pantry_models import PantryItemCreate, PantryItemRead, PantryItemUpdate
 from app.crud.crud_pantry import pantry as crud_pantry
 from app.models.user_models import User
 
@@ -45,12 +45,71 @@ def read_pantry_items(
     )
 
 
+@router.get("/items/{item_id}", response_model=PantryItemRead)
+def read_pantry_item(
+    *,
+    db: Session = Depends(get_db),
+    item_id: int,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get pantry item by ID for current user
+    """
+    item = crud_pantry.get_by_id_and_user(
+        db=db, 
+        id=item_id, 
+        user_id=current_user.id
+    )
+    if not item:
+        raise HTTPException(status_code=404, detail="Pantry item not found")
+    return item
 
 
+@router.put("/items/{item_id}", response_model=PantryItemRead)
+def update_pantry_item(
+    *,
+    db: Session = Depends(get_db),
+    item_id: int,
+    item_in: PantryItemUpdate,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Update pantry item for current user
+    """
+    item = crud_pantry.get_by_id_and_user(
+        db=db, 
+        id=item_id, 
+        user_id=current_user.id
+    )
+    if not item:
+        raise HTTPException(status_code=404, detail="Pantry item not found")
+    
+    updated_item = crud_pantry.update_by_user(
+        db=db, 
+        db_obj=item, 
+        obj_in=item_in, 
+        user_id=current_user.id
+    )
+    if not updated_item:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+    return updated_item
 
 
-
-
-
-## get /items
-## post /items
+@router.delete("/items/{item_id}")
+def delete_pantry_item(
+    *,
+    db: Session = Depends(get_db),
+    item_id: int,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Delete pantry item for current user
+    """
+    item = crud_pantry.delete_by_user(
+        db=db, 
+        id=item_id, 
+        user_id=current_user.id
+    )
+    if not item:
+        raise HTTPException(status_code=404, detail="Pantry item not found")
+    return {"message": "Pantry item deleted successfully"}

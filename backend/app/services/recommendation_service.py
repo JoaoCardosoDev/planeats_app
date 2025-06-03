@@ -9,7 +9,10 @@ from app.schemas.recommendations import (
     MatchingIngredient, 
     MissingIngredient, 
     ExpiringIngredient,
-    RecipeRecommendationsResponse
+    RecipeRecommendationsResponse,
+    RecommendationFilters,
+    RecommendationSort,
+    RecommendationMetadata
 )
 
 logger = logging.getLogger(__name__)
@@ -17,13 +20,25 @@ logger = logging.getLogger(__name__)
 class RecommendationService:
     def __init__(self):
         self.minimum_match_score = 0.1  # Minimum score to include a recipe
-        self.max_recommendations = 10  # Maximum number of recommendations to return
+        self.max_recommendations = 50  # Maximum number of recommendations to return
 
-    def get_recommendations(self, db: Session, user_id: int) -> RecipeRecommendationsResponse:
+    def get_recommendations(
+        self, 
+        db: Session, 
+        user_id: int,
+        filters: Optional[RecommendationFilters] = None,
+        sort: Optional[RecommendationSort] = None
+    ) -> RecipeRecommendationsResponse:
         """
-        Get recipe recommendations based on user's pantry items
+        Get recipe recommendations based on user's pantry items with filtering and sorting
         """
         logger.info(f"Getting recipe recommendations for user {user_id}")
+        
+        # Set defaults
+        if filters is None:
+            filters = RecommendationFilters()
+        if sort is None:
+            sort = RecommendationSort()
         
         # Get user's pantry items
         pantry_items = db.exec(
@@ -35,7 +50,13 @@ class RecommendationService:
             return RecipeRecommendationsResponse(
                 recommendations=[],
                 total_pantry_items=0,
-                total_recipes_analyzed=0,
+                metadata=RecommendationMetadata(
+                    total_recipes_analyzed=0,
+                    total_before_filters=0,
+                    total_after_filters=0,
+                    applied_filters=filters,
+                    applied_sort=sort
+                ),
                 message="Sua despensa está vazia. Adicione alguns itens para receber recomendações de receitas!"
             )
         
@@ -52,7 +73,13 @@ class RecommendationService:
             return RecipeRecommendationsResponse(
                 recommendations=[],
                 total_pantry_items=len(pantry_items),
-                total_recipes_analyzed=0,
+                metadata=RecommendationMetadata(
+                    total_recipes_analyzed=0,
+                    total_before_filters=0,
+                    total_after_filters=0,
+                    applied_filters=filters,
+                    applied_sort=sort
+                ),
                 message="Nenhuma receita disponível no momento. Tente novamente mais tarde!"
             )
         
@@ -79,28 +106,108 @@ class RecommendationService:
             if recommendation and recommendation.match_score >= self.minimum_match_score:
                 recommendations.append(recommendation)
         
-        # Sort by match score (highest first), then by expiring ingredients
-        recommendations.sort(key=lambda x: (
-            x.match_score,
-            len(x.expiring_ingredients_used),
-            -x.preparation_time_minutes if x.preparation_time_minutes else 0
-        ), reverse=True)
+        total_before_filters = len(recommendations)
+        
+        # Apply filters
+        filtered_recommendations = self._apply_filters(recommendations, filters)
+        
+        # Apply sorting
+        sorted_recommendations = self._apply_sorting(filtered_recommendations, sort)
         
         # Limit to max recommendations
-        recommendations = recommendations[:self.max_recommendations]
+        final_recommendations = sorted_recommendations[:self.max_recommendations]
         
         message = None
-        if not recommendations:
-            message = "Não encontramos receitas que correspondam aos seus itens da despensa. Considere adicionar mais ingredientes!"
+        if not final_recommendations:
+            if total_before_filters == 0:
+                message = "Não encontramos receitas que correspondam aos seus itens da despensa. Considere adicionar mais ingredientes!"
+            else:
+                message = "Nenhuma receita corresponde aos filtros aplicados. Tente ajustar os critérios de pesquisa."
         
-        logger.info(f"Generated {len(recommendations)} recommendations for user {user_id}")
+        logger.info(f"Generated {len(final_recommendations)} recommendations for user {user_id} (filtered from {total_before_filters})")
         
         return RecipeRecommendationsResponse(
-            recommendations=recommendations,
+            recommendations=final_recommendations,
             total_pantry_items=len(pantry_items),
-            total_recipes_analyzed=len(recipes),
+            metadata=RecommendationMetadata(
+                total_recipes_analyzed=len(recipes),
+                total_before_filters=total_before_filters,
+                total_after_filters=len(final_recommendations),
+                applied_filters=filters,
+                applied_sort=sort
+            ),
             message=message
         )
+
+    def _apply_filters(
+        self, 
+        recommendations: List[RecommendedRecipe], 
+        filters: RecommendationFilters
+    ) -> List[RecommendedRecipe]:
+        """Apply filters to recommendations"""
+        filtered = recommendations.copy()
+        
+        # Filter by max preparation time
+        if filters.max_preparation_time is not None:
+            filtered = [
+                r for r in filtered 
+                if r.preparation_time_minutes is None or r.preparation_time_minutes <= filters.max_preparation_time
+            ]
+        
+        # Filter by max calories
+        if filters.max_calories is not None:
+            filtered = [
+                r for r in filtered 
+                if r.estimated_calories is None or r.estimated_calories <= filters.max_calories
+            ]
+        
+        # Filter by max missing ingredients
+        if filters.max_missing_ingredients is not None:
+            filtered = [
+                r for r in filtered 
+                if len(r.missing_ingredients) <= filters.max_missing_ingredients
+            ]
+        
+        return filtered
+
+    def _apply_sorting(
+        self, 
+        recommendations: List[RecommendedRecipe], 
+        sort: RecommendationSort
+    ) -> List[RecommendedRecipe]:
+        """Apply sorting to recommendations"""
+        reverse = sort.sort_order == "desc"
+        
+        if sort.sort_by == "match_score":
+            return sorted(recommendations, key=lambda x: x.match_score, reverse=reverse)
+        
+        elif sort.sort_by == "preparation_time":
+            # Handle None values by putting them at the end
+            return sorted(
+                recommendations, 
+                key=lambda x: (x.preparation_time_minutes is None, x.preparation_time_minutes or 0), 
+                reverse=reverse
+            )
+        
+        elif sort.sort_by == "calories":
+            # Handle None values by putting them at the end
+            return sorted(
+                recommendations, 
+                key=lambda x: (x.estimated_calories is None, x.estimated_calories or 0), 
+                reverse=reverse
+            )
+        
+        elif sort.sort_by == "expiring_ingredients":
+            # Sort by number of expiring ingredients (more expiring = higher priority)
+            return sorted(
+                recommendations, 
+                key=lambda x: len(x.expiring_ingredients_used), 
+                reverse=not reverse  # More expiring ingredients should come first
+            )
+        
+        else:
+            # Default to match_score descending
+            return sorted(recommendations, key=lambda x: x.match_score, reverse=True)
 
     def _analyze_recipe_match(
         self, 
@@ -247,10 +354,19 @@ class RecommendationService:
         
         return False
 
-
 # Create service instance
 recommendation_service = RecommendationService()
 
-def get_recipe_recommendations(db: Session, user_id: int) -> RecipeRecommendationsResponse:
+def get_recipe_recommendations(
+    db: Session, 
+    user_id: int,
+    filters: Optional[RecommendationFilters] = None,
+    sort: Optional[RecommendationSort] = None
+) -> RecipeRecommendationsResponse:
     """Service function for the API endpoint"""
-    return recommendation_service.get_recommendations(db=db, user_id=user_id)
+    return recommendation_service.get_recommendations(
+        db=db, 
+        user_id=user_id, 
+        filters=filters, 
+        sort=sort
+    )

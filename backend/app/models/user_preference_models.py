@@ -34,8 +34,13 @@ class UserPreferenceBase(SQLModel):
     # Enhanced dietary restrictions with specific enums
     dietary_restrictions: Optional[List[str]] = Field(default=None, sa_column=Column(JSON))
     
-    # Preferred cuisine types
+    # Preferred cuisine types (for US5.1 compatibility, also keeping as cuisine_preferences)
     preferred_cuisines: Optional[List[str]] = Field(default=None, sa_column=Column(JSON))
+    cuisine_preferences: Optional[List[str]] = Field(default=None, sa_column=Column(JSON))
+    
+    # US5.1 specific fields
+    disliked_ingredients: Optional[List[str]] = Field(default=None, sa_column=Column(JSON))
+    notification_preferences: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
     
     # Preferred difficulty level
     preferred_difficulty: Optional[str] = None
@@ -70,6 +75,9 @@ class UserPreferenceUpdate(SQLModel):
     daily_calorie_goal: Optional[int] = None
     dietary_restrictions: Optional[List[str]] = None
     preferred_cuisines: Optional[List[str]] = None
+    cuisine_preferences: Optional[List[str]] = None
+    disliked_ingredients: Optional[List[str]] = None
+    notification_preferences: Optional[Dict[str, Any]] = None
     preferred_difficulty: Optional[str] = None
     max_prep_time_preference: Optional[int] = None
     max_calories_preference: Optional[int] = None

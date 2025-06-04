@@ -47,10 +47,15 @@ def get_recommendations(
     sort_order: Literal["asc", "desc"] = Query(
         "desc",
         description="Sort order - ascending or descending"
+    ),
+    # Preference parameters
+    use_preferences: bool = Query(
+        True,
+        description="Whether to apply user preferences to recommendations"
     )
 ):
     """
-    Get recipe recommendations based on user's pantry items with filtering and sorting
+    Get recipe recommendations based on user's pantry items with filtering, sorting, and preferences
     
     Returns a list of recommended recipes that use ingredients from the user's pantry.
     
@@ -63,21 +68,33 @@ def get_recommendations(
     - `sort_by`: Field to sort by (match_score, preparation_time, calories, expiring_ingredients)
     - `sort_order`: Sort order (asc for ascending, desc for descending)
     
+    **Preference Integration:**
+    - `use_preferences`: Enable/disable user preference-based filtering and scoring
+    - Considers dietary restrictions (vegetarian, vegan, gluten-free, etc.)
+    - Prioritizes preferred cuisine types (Portuguese, Italian, Asian, etc.)
+    - Considers preferred difficulty level (easy, medium, hard)
+    - Applies user's calorie and preparation time preferences
+    - Provides bonus scoring for recipes that match user preferences
+    
     **Default Behavior:**
     - No filters applied by default (shows all matching recipes)
     - Sorted by match_score in descending order (best matches first)
+    - User preferences enabled by default for personalized recommendations
     
     **Recipe Scoring:**
-    - Recipes are scored based on how many pantry ingredients they use
-    - Bonus points for using expiring ingredients
+    - Base score: proportion of pantry ingredients used in recipe
+    - Bonus points for using expiring ingredients (waste reduction)
     - Bonus points for complete recipes (no missing ingredients)
+    - **NEW:** Preference bonuses for matching dietary restrictions, cuisine types, and difficulty
+    - **NEW:** Higher scores for recipes that align with user's food preferences
     
     **Returns:**
     - List of recommended recipes with detailed matching information
     - Metadata including filter counts and applied parameters
     - Informative messages for edge cases
+    - Preference-aware scoring when enabled
     """
-    logger.info(f"Getting filtered recommendations for user {current_user.id}")
+    logger.info(f"Getting recommendations for user {current_user.id} (preferences={use_preferences})")
     
     # Create filter and sort objects
     filters = RecommendationFilters(
@@ -102,14 +119,16 @@ def get_recommendations(
     
     logger.info(
         f"Filters: {', '.join(applied_filters) if applied_filters else 'none'}, "
-        f"Sort: {sort_by} {sort_order}"
+        f"Sort: {sort_by} {sort_order}, "
+        f"Preferences: {'enabled' if use_preferences else 'disabled'}"
     )
     
     recommendations = get_recipe_recommendations(
         db=db, 
         user_id=current_user.id,
         filters=filters,
-        sort=sort
+        sort=sort,
+        use_preferences=use_preferences
     )
     
     logger.info(

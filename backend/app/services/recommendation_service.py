@@ -4,6 +4,8 @@ from datetime import date, datetime
 from sqlmodel import Session, select
 from app.models.pantry_models import PantryItem
 from app.models.recipe_models import Recipe, RecipeIngredient
+from app.models.user_preference_models import UserPreference
+from app.crud.crud_user_preferences import user_preference as user_preference_crud
 from app.schemas.recommendations import (
     RecommendedRecipe, 
     MatchingIngredient, 
@@ -27,18 +29,26 @@ class RecommendationService:
         db: Session, 
         user_id: int,
         filters: Optional[RecommendationFilters] = None,
-        sort: Optional[RecommendationSort] = None
+        sort: Optional[RecommendationSort] = None,
+        use_preferences: bool = True
     ) -> RecipeRecommendationsResponse:
         """
-        Get recipe recommendations based on user's pantry items with filtering and sorting
+        Get recipe recommendations based on user's pantry items with filtering, sorting, and preferences
         """
-        logger.info(f"Getting recipe recommendations for user {user_id}")
+        logger.info(f"Getting recipe recommendations for user {user_id} (use_preferences={use_preferences})")
         
         # Set defaults
         if filters is None:
             filters = RecommendationFilters()
         if sort is None:
             sort = RecommendationSort()
+        
+        # Get user preferences if enabled
+        user_preferences = None
+        if use_preferences:
+            user_preferences = user_preference_crud.get_by_user_id(db, user_id=user_id)
+            if user_preferences:
+                logger.info(f"Using user preferences for recommendations: dietary_restrictions={user_preferences.dietary_restrictions}, preferred_cuisines={user_preferences.preferred_cuisines}")
         
         # Get user's pantry items
         pantry_items = db.exec(
@@ -85,6 +95,11 @@ class RecommendationService:
         
         logger.info(f"Analyzing {len(recipes)} recipes against {len(pantry_items)} pantry items")
         
+        # Filter recipes based on user preferences first
+        if user_preferences:
+            recipes = self._filter_recipes_by_preferences(recipes, user_preferences)
+            logger.info(f"After preference filtering: {len(recipes)} recipes remain")
+        
         # Analyze each recipe and calculate match scores
         recommendations = []
         
@@ -100,7 +115,8 @@ class RecommendationService:
             recommendation = self._analyze_recipe_match(
                 recipe=recipe,
                 recipe_ingredients=recipe_ingredients,
-                pantry_items=pantry_items
+                pantry_items=pantry_items,
+                user_preferences=user_preferences
             )
             
             if recommendation and recommendation.match_score >= self.minimum_match_score:
@@ -108,7 +124,7 @@ class RecommendationService:
         
         total_before_filters = len(recommendations)
         
-        # Apply filters
+        # Apply additional filters
         filtered_recommendations = self._apply_filters(recommendations, filters)
         
         # Apply sorting
@@ -120,7 +136,7 @@ class RecommendationService:
         message = None
         if not final_recommendations:
             if total_before_filters == 0:
-                message = "Não encontramos receitas que correspondam aos seus itens da despensa. Considere adicionar mais ingredientes!"
+                message = "Não encontramos receitas que correspondam aos seus itens da despensa e preferências. Considere adicionar mais ingredientes ou ajustar suas preferências!"
             else:
                 message = "Nenhuma receita corresponde aos filtros aplicados. Tente ajustar os critérios de pesquisa."
         
@@ -138,6 +154,55 @@ class RecommendationService:
             ),
             message=message
         )
+
+    def _filter_recipes_by_preferences(
+        self, 
+        recipes: List[Recipe], 
+        user_preferences: UserPreference
+    ) -> List[Recipe]:
+        """Filter recipes based on user preferences"""
+        filtered_recipes = []
+        
+        for recipe in recipes:
+            # Check dietary restrictions
+            if user_preferences.dietary_restrictions:
+                if recipe.dietary_tags:
+                    # Check if recipe satisfies user's dietary restrictions
+                    recipe_dietary_tags = set(recipe.dietary_tags)
+                    user_restrictions = set(user_preferences.dietary_restrictions)
+                    
+                    # If user has dietary restrictions, recipe must have matching tags
+                    if not user_restrictions.issubset(recipe_dietary_tags):
+                        continue
+                else:
+                    # Recipe has no dietary tags but user has restrictions - skip
+                    continue
+            
+            # Check preferred cuisines
+            if user_preferences.preferred_cuisines and recipe.cuisine_type:
+                if recipe.cuisine_type not in user_preferences.preferred_cuisines:
+                    continue
+            
+            # Check preferred difficulty
+            if user_preferences.preferred_difficulty and recipe.difficulty_level:
+                if recipe.difficulty_level != user_preferences.preferred_difficulty:
+                    continue
+            
+            # Check max prep time preference
+            if (user_preferences.max_prep_time_preference and 
+                recipe.preparation_time_minutes and 
+                recipe.preparation_time_minutes > user_preferences.max_prep_time_preference):
+                continue
+            
+            # Check max calories preference
+            if (user_preferences.max_calories_preference and 
+                recipe.estimated_calories and 
+                recipe.estimated_calories > user_preferences.max_calories_preference):
+                continue
+            
+            filtered_recipes.append(recipe)
+        
+        return filtered_recipes
 
     def _apply_filters(
         self, 
@@ -213,10 +278,11 @@ class RecommendationService:
         self, 
         recipe: Recipe, 
         recipe_ingredients: List[RecipeIngredient], 
-        pantry_items: List[PantryItem]
+        pantry_items: List[PantryItem],
+        user_preferences: Optional[UserPreference] = None
     ) -> Optional[RecommendedRecipe]:
         """
-        Analyze how well a recipe matches the available pantry items
+        Analyze how well a recipe matches the available pantry items and user preferences
         """
         matching_ingredients = []
         missing_ingredients = []
@@ -271,7 +337,7 @@ class RecommendationService:
                 )
                 missing_ingredients.append(missing_ingredient)
         
-        # Calculate match score
+        # Calculate match score with preference bonuses
         if total_recipe_ingredients == 0:
             match_score = 0.0
         else:
@@ -283,7 +349,32 @@ class RecommendationService:
             # Bonus for having all ingredients
             complete_bonus = 0.1 if len(missing_ingredients) == 0 else 0
             
-            match_score = min(1.0, base_score + expiring_bonus + complete_bonus)
+            # Preference-based bonuses
+            preference_bonus = 0.0
+            if user_preferences:
+                # Bonus for preferred cuisine
+                if (user_preferences.preferred_cuisines and 
+                    recipe.cuisine_type and 
+                    recipe.cuisine_type in user_preferences.preferred_cuisines):
+                    preference_bonus += 0.15
+                
+                # Bonus for preferred difficulty
+                if (user_preferences.preferred_difficulty and 
+                    recipe.difficulty_level and 
+                    recipe.difficulty_level == user_preferences.preferred_difficulty):
+                    preference_bonus += 0.1
+                
+                # Bonus for dietary compliance
+                if (user_preferences.dietary_restrictions and 
+                    recipe.dietary_tags and 
+                    set(user_preferences.dietary_restrictions).issubset(set(recipe.dietary_tags))):
+                    preference_bonus += 0.2
+                
+                # Bonus for prioritizing expiring ingredients
+                if user_preferences.prioritize_expiring_ingredients and expiring_ingredients_used:
+                    preference_bonus += 0.1
+            
+            match_score = min(1.0, base_score + expiring_bonus + complete_bonus + preference_bonus)
         
         return RecommendedRecipe(
             recipe_id=recipe.id,
@@ -361,12 +452,14 @@ def get_recipe_recommendations(
     db: Session, 
     user_id: int,
     filters: Optional[RecommendationFilters] = None,
-    sort: Optional[RecommendationSort] = None
+    sort: Optional[RecommendationSort] = None,
+    use_preferences: bool = True
 ) -> RecipeRecommendationsResponse:
     """Service function for the API endpoint"""
     return recommendation_service.get_recommendations(
         db=db, 
         user_id=user_id, 
         filters=filters, 
-        sort=sort
+        sort=sort,
+        use_preferences=use_preferences
     )

@@ -64,8 +64,8 @@ interface AppState {
   userComments: UserComment[] | null
 
   // User actions
-  login: (email: string, password: string) => boolean
-  register: (name: string, email: string, password: string) => boolean
+  login: (email: string, _password: string) => boolean
+  register: (name: string, email: string, _password: string) => boolean
   logout: () => void
   updateUser: (userData: Partial<User>) => void
 
@@ -151,7 +151,7 @@ export const useAppStore = create<AppState>()(
       userComments: null,
 
       // User actions
-      login: (email: string, password: string) => {
+      login: (email: string, _password: string) => {
         const user: User = {
           id: "1",
           name: "Maria Silva",
@@ -163,7 +163,7 @@ export const useAppStore = create<AppState>()(
         return true
       },
 
-      register: (name: string, email: string, password: string) => {
+      register: (name: string, email: string, _password: string) => {
         const user: User = {
           id: Date.now().toString(),
           name: name,
@@ -187,7 +187,7 @@ export const useAppStore = create<AppState>()(
       },
 
       // Ingredient actions
-      addIngredient: (ingredient: Omit<Ingredient, "id" | "addedDate">) => {
+      addIngredient: (ingredient) => {
         const newIngredient: Ingredient = {
           ...ingredient,
           id: Date.now().toString(),
@@ -198,26 +198,26 @@ export const useAppStore = create<AppState>()(
         }))
       },
 
-      updateIngredient: (id: string, ingredient: Partial<Ingredient>) => {
+      updateIngredient: (id, ingredient) => {
         set((state) => ({
           ingredients: state.ingredients.map((item) => (item.id === id ? { ...item, ...ingredient } : item)),
         }))
       },
 
-      deleteIngredient: (id: string) => {
+      deleteIngredient: (id) => {
         set((state) => ({
           ingredients: state.ingredients.filter((item) => item.id !== id),
         }))
       },
 
-      getIngredientsByCategory: (category: string) => {
+      getIngredientsByCategory: (category) => {
         const { ingredients } = get()
         if (category === "todos" || category === "todas") return ingredients
         return ingredients.filter((item) => item.category === category)
       },
 
       // Recipe actions
-      addRecipe: (recipe: Omit<Recipe, "id" | "createdAt" | "comments" | "rating" | "reviews">) => {
+      addRecipe: (recipe) => {
         const newRecipe: Recipe = {
           ...recipe,
           id: Date.now().toString(),
@@ -231,20 +231,20 @@ export const useAppStore = create<AppState>()(
         }))
       },
 
-      updateRecipe: (id: string, recipe: Partial<Recipe>) => {
+      updateRecipe: (id, recipe) => {
         set((state) => ({
           recipes: state.recipes.map((item) => (item.id === id ? { ...item, ...recipe } : item)),
         }))
       },
 
-      deleteRecipe: (id: string) => {
+      deleteRecipe: (id) => {
         set((state) => ({
           recipes: state.recipes.filter((item) => item.id !== id),
           favoriteRecipes: state.favoriteRecipes.filter((fav) => fav !== id),
         }))
       },
 
-      toggleFavorite: (recipeId: string) => {
+      toggleFavorite: (recipeId) => {
         set((state) => {
           const isFavorite = state.favoriteRecipes.includes(recipeId)
           const newFavorites = isFavorite
@@ -262,7 +262,7 @@ export const useAppStore = create<AppState>()(
         })
       },
 
-      addComment: (recipeId: string, comment: Omit<Comment, "id" | "createdAt">) => {
+      addComment: (recipeId, comment) => {
         const newComment: Comment = {
           ...comment,
           id: Date.now().toString(),
@@ -276,7 +276,7 @@ export const useAppStore = create<AppState>()(
         }))
       },
 
-      updateRecipeRating: (recipeId: string, rating: number) => {
+      updateRecipeRating: (recipeId, rating) => {
         set((state) => ({
           recipes: state.recipes.map((recipe) => {
             if (recipe.id === recipeId) {
@@ -289,7 +289,7 @@ export const useAppStore = create<AppState>()(
         }))
       },
 
-      addUserComment: (commentId: string, content: string, rating: number) => {
+      addUserComment: (commentId, content, rating) => {
         set((state) => {
           const userComments = state.userComments || []
           const newComment: UserComment = {
@@ -306,7 +306,7 @@ export const useAppStore = create<AppState>()(
         })
       },
 
-      updateUserComment: (commentId: string, content: string, rating: number) => {
+      updateUserComment: (commentId, content, rating) => {
         set((state) => {
           const userComments = state.userComments || []
           const updatedComments = userComments.map((comment) =>
@@ -320,7 +320,7 @@ export const useAppStore = create<AppState>()(
         })
       },
 
-      deleteUserComment: (commentId: string) => {
+      deleteUserComment: (commentId) => {
         set((state) => {
           const userComments = state.userComments || []
           return {
@@ -330,13 +330,13 @@ export const useAppStore = create<AppState>()(
         })
       },
 
-      getRecipesByCategory: (category: string) => {
+      getRecipesByCategory: (category) => {
         const { recipes } = get()
         if (category === "todas" || category === "todos") return recipes
         return recipes.filter((recipe) => recipe.category === category)
       },
 
-      searchRecipes: (query: string) => {
+      searchRecipes: (query) => {
         const { recipes } = get()
         return recipes.filter(
           (recipe) =>

@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlmodel import Session
-from typing import List
+from typing import List, Optional
 
 from app.api.v1.deps import get_current_user, get_db
 from app.models.recipe_models import RecipeCreate, RecipeRead
@@ -8,7 +8,6 @@ from app.crud.crud_recipe import recipe as crud_recipe
 from app.models.user_models import User
 
 router = APIRouter()
-
 
 @router.post("/", response_model=RecipeRead)
 def create_recipe(
@@ -26,25 +25,38 @@ def create_recipe(
         user_id=current_user.id
     )
 
-
 @router.get("/", response_model=List[RecipeRead])
 def read_recipes(
     *,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     skip: int = 0,
-    limit: int = 100
+    limit: int = 100,
+    # US3.2 Filter parameters
+    user_created_only: Optional[bool] = Query(None, description="Filter to show only recipes created by the current user"),
+    max_calories: Optional[int] = Query(None, description="Maximum calories per recipe"),
+    max_prep_time: Optional[int] = Query(None, description="Maximum preparation time in minutes"),
+    ingredients: Optional[List[str]] = Query(None, description="Filter recipes that contain these ingredients")
 ):
     """
-    Retrieve recipes accessible to current user (user's recipes + system recipes)
+    Retrieve recipes with optional filtering
+    
+    Filters available (US3.2):
+    - user_created_only: Show only recipes created by current user
+    - max_calories: Maximum calories per recipe
+    - max_prep_time: Maximum preparation time in minutes
+    - ingredients: List of ingredients that recipes must contain
     """
-    return crud_recipe.get_multi_by_user(
-        db=db, 
+    return crud_recipe.get_multi_with_filters(
+        db=db,
         user_id=current_user.id,
         skip=skip,
-        limit=limit
+        limit=limit,
+        user_created_only=user_created_only,
+        max_calories=max_calories,
+        max_prep_time=max_prep_time,
+        ingredients=ingredients
     )
-
 
 @router.get("/{recipe_id}", response_model=RecipeRead)
 def read_recipe(

@@ -1,410 +1,494 @@
-"use client"
+'use client';
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { CheckCircle2, ChefHat, ClipboardList, Clock, Star } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import Image from "next/image";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import AuthStatus from "@/components/auth/AuthStatus"; // Import AuthStatus
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import React, { useEffect } from 'react';
+import { usePantryItems, useSuggestedRecipes, useMyRecipes } from '@/hooks/useApi';
+import { PantryItem, Recipe } from '@/types/api';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { useToast } from '@/hooks/use-toast';
+import { 
+  Package, 
+  ChefHat, 
+  Clock, 
+  Users, 
+  Calendar,
+  AlertTriangle,
+  Sparkles,
+  Plus,
+  ArrowRight,
+  Utensils
+} from 'lucide-react';
+import Link from 'next/link';
+import { format, isAfter, differenceInDays, parseISO } from 'date-fns';
 
-export default function Home() {
+export default function HomePage() {
+  const { data: session, status } = useSession();
   const router = useRouter();
+  const { toast: _toast } = useToast();
+
+  const {
+    data: pantryItems,
+    loading: loadingPantry,
+    error: _pantryError,
+  } = usePantryItems();
+
+  const {
+    data: suggestedRecipes,
+    loading: loadingRecipes,
+    error: _recipesError,
+  } = useSuggestedRecipes();
+
+  const {
+    data: myRecipes,
+    loading: loadingMyRecipes,
+  } = useMyRecipes();
+
+  useEffect(() => {
+    if (status === 'loading') return;
+    if (!session) router.push('/login');
+  }, [session, status, router]);
+
+  const getExpiringItems = (items: PantryItem[]) => {
+    return items.filter(item => {
+      if (!item.expiry_date) return false;
+      const expiry = parseISO(item.expiry_date);
+      const today = new Date();
+      const daysUntilExpiry = differenceInDays(expiry, today);
+      return daysUntilExpiry <= 7 && daysUntilExpiry >= 0;
+    });
+  };
+
+  const getExpiredItems = (items: PantryItem[]) => {
+    return items.filter(item => {
+      if (!item.expiry_date) return false;
+      const expiry = parseISO(item.expiry_date);
+      const today = new Date();
+      return isAfter(today, expiry);
+    });
+  };
+
+  const getCategoryStats = (items: PantryItem[]) => {
+    const categories = items.reduce((acc, item) => {
+      const category = item.category || 'other';
+      acc[category] = (acc[category] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(categories)
+      .map(([category, count]) => ({ category, count }))
+      .sort((a, b) => b.count - a.count);
+  };
+
+  const getRecentRecipes = (recipes: Recipe[]) => {
+    return recipes
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 3);
+  };
+
+  const getDifficultyColor = (difficulty: string) => {
+    switch (difficulty.toLowerCase()) {
+      case 'easy':
+        return 'bg-green-100 text-green-800';
+      case 'medium':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'hard':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getDifficultyLabel = (difficulty: string) => {
+    switch (difficulty.toLowerCase()) {
+      case 'easy':
+        return 'Fácil';
+      case 'medium':
+        return 'Médio';
+      case 'hard':
+        return 'Difícil';
+      default:
+        return difficulty;
+    }
+  };
+
+  if (status === 'loading' || !session) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-4">A carregar...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const expiringItems = pantryItems ? getExpiringItems(pantryItems) : [];
+  const expiredItems = pantryItems ? getExpiredItems(pantryItems) : [];
+  const categoryStats = pantryItems ? getCategoryStats(pantryItems) : [];
+  const recentRecipes = myRecipes ? getRecentRecipes(myRecipes) : [];
 
   return (
-    <div className="flex flex-col min-h-screen bg-green-50">
-      <div className="container mx-auto p-4"> {/* Added a container for AuthStatus */}
-        <AuthStatus /> {/* Added AuthStatus component */}
-      </div>
-
-      {/* Hero Section */}
-      <section className="py-16 md:py-24 bg-green-50">
-        <div className="container grid gap-8 md:grid-cols-2 md:gap-16 items-center">
-          <div className="flex flex-col gap-4">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight">
-              <span className="text-green-600">PLAN</span> SMARTER, <span className="text-amber-500">EAT</span> BETTER.
-            </h1>
-            <p className="text-lg text-muted-foreground">
-              Descubra receitas deliciosas baseadas nos ingredientes que você já tem em casa. Economize tempo, dinheiro
-              e reduza o desperdício de alimentos.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 mt-4">
-              <Button asChild size="lg" className="bg-green-600 hover:bg-green-700">
-                <Link href="/cadastro">Criar Conta Grátis</Link>
-              </Button>
-              <Button asChild size="lg" variant="outline">
-                <Link href="/login">Entrar</Link>
-              </Button>
-            </div>
-          </div>
-          <div className="relative h-[400px] w-full rounded-xl overflow-hidden shadow-xl">
-            <Image
-              src="/images/Initial.png"
-              alt="Frigorífico organizado com alimentos frescos"
-              width={600}
-              height={400}
-              className="object-cover"
-              priority
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Como Funciona Section */}
-      <section id="como-funciona" className="py-16 bg-green-50">
-        <div className="container flex flex-col gap-12">
-          <div className="text-center">
-            <h2 className="text-3xl font-bold">Como Funciona</h2>
-            <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
-              Três passos simples para transformar os ingredientes da sua geladeira em refeições deliciosas
+    <div className="container mx-auto p-4 max-w-7xl">
+      <div className="flex flex-col space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold">Dashboard</h1>
+            <p className="text-muted-foreground">
+              Bem-vindo de volta, {session.user?.name || session.user?.email}!
             </p>
           </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            <Card className="bg-white border-none shadow-md">
-              <CardContent className="pt-6">
-                <div className="flex flex-col items-center text-center gap-4">
-                  <div className="rounded-full bg-green-100 p-4">
-                    <ClipboardList className="h-8 w-8 text-green-600" />
-                  </div>
-                  <h3 className="text-xl font-bold">1. Cadastre seus Ingredientes</h3>
-                  <p className="text-muted-foreground">
-                    Adicione os ingredientes que você tem disponíveis no seu frigorífico.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white border-none shadow-md">
-              <CardContent className="pt-6">
-                <div className="flex flex-col items-center text-center gap-4">
-                  <div className="rounded-full bg-amber-100 p-4">
-                    <CheckCircle2 className="h-8 w-8 text-amber-600" />
-                  </div>
-                  <h3 className="text-xl font-bold">2. Receba Sugestões</h3>
-                  <p className="text-muted-foreground">
-                    Nossa IA analisa seus ingredientes e sugere receitas deliciosas.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white border-none shadow-md">
-              <CardContent className="pt-6">
-                <div className="flex flex-col items-center text-center gap-4">
-                  <div className="rounded-full bg-green-100 p-4">
-                    <ChefHat className="h-8 w-8 text-green-600" />
-                  </div>
-                  <h3 className="text-xl font-bold">3. Cozinhe e Aproveite</h3>
-                  <p className="text-muted-foreground">
-                    Siga as instruções de preparo e desfrute de refeições deliciosas.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Receitas em Destaque */}
-      <section className="py-16">
-        <div className="container flex flex-col gap-12">
-          <div className="text-center">
-            <h2 className="text-3xl font-bold">Receitas em Destaque</h2>
-            <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
-              Descubra algumas das receitas mais populares criadas pelos nossos usuários
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-6">
-            <Card className="overflow-hidden">
-              <div className="relative h-48 w-full">
-                <Image
-                  src="/images/Arroz de Frango.png"
-                  alt="Arroz de Frango"
-                  fill
-                  className="object-cover"
-                />
-              </div>
-              <CardContent className="p-4">
-                <h3 className="text-xl font-semibold">Arroz de Frango</h3>
-                <p className="text-sm text-muted-foreground mt-2">Um prato completo de arroz com frango e legumes.</p>
-                <div className="flex items-center gap-4 mt-4">
-                  <div className="flex items-center gap-1 text-sm">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span>40 min</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-sm">
-                    <ChefHat className="h-4 w-4 text-muted-foreground" />
-                    <span>Médio</span>
-                  </div>
-                </div>
-                <Button className="w-full mt-4 bg-green-600 hover:bg-green-700" onClick={() => router.push("/login")}>
-                  Ver Receita
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="overflow-hidden">
-              <div className="relative h-48 w-full">
-                <Image
-                  src="/images/Salada de Tomate com Queijo.png"
-                  alt="Salada de Tomate com Queijo"
-                  fill
-                  className="object-cover"
-                />
-              </div>
-              <CardContent className="p-4">
-                <h3 className="text-xl font-semibold">Salada de Tomate com Queijo</h3>
-                <p className="text-sm text-muted-foreground mt-2">Uma salada fresca e rápida de preparar.</p>
-                <div className="flex items-center gap-4 mt-4">
-                  <div className="flex items-center gap-1 text-sm">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span>10 min</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-sm">
-                    <ChefHat className="h-4 w-4 text-muted-foreground" />
-                    <span>Fácil</span>
-                  </div>
-                </div>
-                <Button className="w-full mt-4 bg-green-600 hover:bg-green-700" onClick={() => router.push("/login")}>
-                  Ver Receita
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="overflow-hidden">
-              <div className="relative h-48 w-full">
-                <Image
-                  src="/images/Omelete de Tomate e Cebola.png"
-                  alt="Omelete de Tomate e Cebola"
-                  fill
-                  className="object-cover"
-                />
-              </div>
-              <CardContent className="p-4">
-                <h3 className="text-xl font-semibold">Omelete de Tomate e Cebola</h3>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Um omelete simples e delicioso com tomate e cebola.
-                </p>
-                <div className="flex items-center gap-4 mt-4">
-                  <div className="flex items-center gap-1 text-sm">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span>15 min</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-sm">
-                    <ChefHat className="h-4 w-4 text-muted-foreground" />
-                    <span>Fácil</span>
-                  </div>
-                </div>
-                <Button className="w-full mt-4 bg-green-600 hover:bg-green-700" onClick={() => router.push("/login")}>
-                  Ver Receita
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="flex justify-center">
-            <Button asChild variant="outline" size="lg" onClick={() => router.push("/login")}>
-              <Link href="/login">Ver Todas as Receitas</Link>
+          <div className="flex gap-2">
+            <Button asChild className="bg-green-600 hover:bg-green-700">
+              <Link href="/receitas-sugeridas">
+                <Sparkles className="h-4 w-4 mr-2" />
+                Gerar Receitas
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href="/adicionar-itens">
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar Item
+              </Link>
             </Button>
           </div>
         </div>
-      </section>
 
-      {/* Depoimentos */}
-      <section className="py-16 bg-green-50">
-        <div className="container flex flex-col gap-12">
-          <div className="text-center">
-            <h2 className="text-3xl font-bold">O Que Nossos Usuários Dizem</h2>
-            <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
-              Veja como o PlanEats tem ajudado pessoas a economizar tempo e dinheiro
-            </p>
-          </div>
+        {/* Quick Stats */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Itens no Frigorífico</CardTitle>
+              <Package className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {loadingPantry ? '...' : pantryItems?.length || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {expiringItems.length > 0 && (
+                  <span className="text-orange-600">
+                    {expiringItems.length} expirando em breve
+                  </span>
+                )}
+                {expiredItems.length > 0 && (
+                  <span className="text-red-600">
+                    {expiredItems.length} expirados
+                  </span>
+                )}
+              </p>
+            </CardContent>
+          </Card>
 
-          <div className="grid md:grid-cols-3 gap-6">
-            <Card className="bg-white border-none shadow-md">
-              <CardContent className="pt-6">
-                <div className="flex flex-col gap-4">
-                  <div className="flex items-center gap-2">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <Star key={star} className="h-5 w-5 fill-amber-400 text-amber-400" />
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Minhas Receitas</CardTitle>
+              <ChefHat className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {loadingMyRecipes ? '...' : myRecipes?.length || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Receitas criadas por mim
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Receitas Sugeridas</CardTitle>
+              <Sparkles className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {loadingRecipes ? '...' : suggestedRecipes?.length || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Baseadas nos seus ingredientes
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Tempo Médio</CardTitle>
+              <Clock className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {myRecipes && myRecipes.length > 0
+                  ? Math.round(
+                      myRecipes.reduce((acc: number, recipe: any) => acc + recipe.prep_time + recipe.cook_time, 0) /
+                      myRecipes.length
+                    )
+                  : 0}m
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Tempo médio de preparo
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Alerts */}
+        {(expiringItems.length > 0 || expiredItems.length > 0) && (
+          <div className="space-y-4">
+            {expiredItems.length > 0 && (
+              <Card className="border-red-200 bg-red-50">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-red-800">
+                    <AlertTriangle className="h-5 w-5" />
+                    Itens Expirados ({expiredItems.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {expiredItems.slice(0, 3).map(item => (
+                      <div key={item.id} className="flex justify-between items-center">
+                        <span className="font-medium">{item.name}</span>
+                        <span className="text-sm text-red-600">
+                          Expirou em {item.expiry_date && format(parseISO(item.expiry_date), 'dd/MM/yyyy')}
+                        </span>
+                      </div>
                     ))}
+                    {expiredItems.length > 3 && (
+                      <p className="text-sm text-muted-foreground">
+                        +{expiredItems.length - 3} mais itens expirados
+                      </p>
+                    )}
                   </div>
-                  <p className="italic">
-                    &quot;O PlanEats revolucionou minha forma de cozinhar. Agora consigo aproveitar todos os ingredientes da
-                    minha geladeira e descobrir receitas incríveis!&quot;
-                  </p>
-                  <div className="flex items-center gap-3 mt-2">
-                    <Avatar className="h-10 w-10">
-                      <AvatarFallback>JD</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-medium">João Silva</p>
-                      <p className="text-sm text-muted-foreground">São Paulo, SP</p>
+                  <Button asChild variant="outline" size="sm" className="mt-4">
+                    <Link href="/meu-frigorifico">
+                      Ver Todos os Itens
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            {expiringItems.length > 0 && (
+              <Card className="border-orange-200 bg-orange-50">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-orange-800">
+                    <Calendar className="h-5 w-5" />
+                    Expirando em Breve ({expiringItems.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {expiringItems.slice(0, 3).map(item => {
+                      const daysLeft = item.expiry_date 
+                        ? differenceInDays(parseISO(item.expiry_date), new Date())
+                        : 0;
+                      return (
+                        <div key={item.id} className="flex justify-between items-center">
+                          <span className="font-medium">{item.name}</span>
+                          <span className="text-sm text-orange-600">
+                            {daysLeft === 0 ? 'Hoje' : `${daysLeft} dias`}
+                          </span>
+                        </div>
+                      );
+                    })}
+                    {expiringItems.length > 3 && (
+                      <p className="text-sm text-muted-foreground">
+                        +{expiringItems.length - 3} mais itens expirando
+                      </p>
+                    )}
+                  </div>
+                  <Button asChild variant="outline" size="sm" className="mt-4">
+                    <Link href="/receitas-sugeridas">
+                      Gerar Receitas
+                      <Sparkles className="h-4 w-4 ml-2" />
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Recent Recipes */}
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <CardTitle className="flex items-center gap-2">
+                  <ChefHat className="h-5 w-5" />
+                  Receitas Recentes
+                </CardTitle>
+                <Button asChild variant="ghost" size="sm">
+                  <Link href="/minhas-receitas">
+                    Ver todas
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Link>
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {loadingMyRecipes ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
+                </div>
+              ) : recentRecipes.length === 0 ? (
+                <div className="text-center py-8">
+                  <Utensils className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-muted-foreground">Nenhuma receita criada ainda</p>
+                  <Button asChild size="sm" className="mt-2">
+                    <Link href="/minhas-receitas">
+                      Criar primeira receita
+                    </Link>
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {recentRecipes.map(recipe => (
+                    <div key={recipe.id} className="flex justify-between items-center p-3 rounded-lg border">
+                      <div className="flex-1">
+                        <h4 className="font-medium">{recipe.title}</h4>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {recipe.prep_time + recipe.cook_time}m
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Users className="h-3 w-3" />
+                            {recipe.servings}
+                          </div>
+                          <Badge variant="outline" className={getDifficultyColor(recipe.difficulty)}>
+                            {getDifficultyLabel(recipe.difficulty)}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Pantry Overview */}
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  Resumo do Frigorífico
+                </CardTitle>
+                <Button asChild variant="ghost" size="sm">
+                  <Link href="/meu-frigorifico">
+                    Ver detalhes
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Link>
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {loadingPantry ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
+                </div>
+              ) : categoryStats.length === 0 ? (
+                <div className="text-center py-8">
+                  <Package className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-muted-foreground">Frigorífico vazio</p>
+                  <Button asChild size="sm" className="mt-2">
+                    <Link href="/adicionar-itens">
+                      Adicionar itens
+                    </Link>
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {categoryStats.slice(0, 5).map(({ category, count }) => {
+                    const percentage = Math.round((count / (pantryItems?.length || 1)) * 100);
+                    const categoryLabel = category.charAt(0).toUpperCase() + category.slice(1);
+                    
+                    return (
+                      <div key={category} className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="font-medium">{categoryLabel}</span>
+                          <span className="text-muted-foreground">{count} itens</span>
+                        </div>
+                        <Progress value={percentage} className="h-2" />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Suggested Recipes */}
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5" />
+                Receitas Sugeridas
+              </CardTitle>
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/receitas-sugeridas">
+                  Ver todas
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </Link>
+              </Button>
+            </div>
+            <CardDescription>
+              Receitas baseadas nos ingredientes do seu frigorífico
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loadingRecipes ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
+              </div>
+            ) : !suggestedRecipes || suggestedRecipes.length === 0 ? (
+              <div className="text-center py-8">
+                <Sparkles className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                <p className="text-muted-foreground mb-4">
+                  Nenhuma receita sugerida ainda
+                </p>
+                <Button asChild className="bg-green-600 hover:bg-green-700">
+                  <Link href="/receitas-sugeridas">
+                    Gerar receitas
+                  </Link>
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {suggestedRecipes.slice(0, 3).map((recipe: any) => (
+                  <div key={recipe.id} className="p-4 rounded-lg border">
+                    <div className="space-y-2">
+                      <h4 className="font-medium line-clamp-1">{recipe.title}</h4>
+                      {recipe.description && (
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {recipe.description}
+                        </p>
+                      )}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          {recipe.prep_time + recipe.cook_time}m
+                        </div>
+                        <Badge variant="outline" className={getDifficultyColor(recipe.difficulty)}>
+                          {getDifficultyLabel(recipe.difficulty)}
+                        </Badge>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white border-none shadow-md">
-              <CardContent className="pt-6">
-                <div className="flex flex-col gap-4">
-                  <div className="flex items-center gap-2">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <Star key={star} className="h-5 w-5 fill-amber-400 text-amber-400" />
-                    ))}
-                  </div>
-                  <p className="italic">
-                    &quot;Reduzi o desperdício de alimentos em casa em mais de 70% desde que comecei a usar o PlanEats. As
-                    receitas são deliciosas e fáceis de preparar!&quot;
-                  </p>
-                  <div className="flex items-center gap-3 mt-2">
-                    <Avatar className="h-10 w-10">
-                      <AvatarFallback>AM</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-medium">Ana Martins</p>
-                      <p className="text-sm text-muted-foreground">Rio de Janeiro, RJ</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white border-none shadow-md">
-              <CardContent className="pt-6">
-                <div className="flex flex-col gap-4">
-                  <div className="flex items-center gap-2">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <Star key={star} className="h-5 w-5 fill-amber-400 text-amber-400" />
-                    ))}
-                  </div>
-                  <p className="italic">
-                    &quot;Como estudante, o PlanEats me ajuda a economizar dinheiro e tempo. Consigo preparar refeições
-                    deliciosas com o que tenho disponível!&quot;
-                  </p>
-                  <div className="flex items-center gap-3 mt-2">
-                    <Avatar className="h-10 w-10">
-                      <AvatarFallback>PO</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-medium">Pedro Oliveira</p>
-                      <p className="text-sm text-muted-foreground">Belo Horizonte, MG</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-16 bg-green-600 text-white">
-        <div className="container text-center">
-          <h2 className="text-3xl font-bold">Comece a Economizar Hoje</h2>
-          <p className="mt-4 max-w-2xl mx-auto">
-            Junte-se a milhares de usuários que estão economizando tempo, dinheiro e reduzindo o desperdício de
-            alimentos com o PlanEats.
-          </p>
-          <Button asChild size="lg" className="mt-8 bg-white text-green-600 hover:bg-gray-100">
-            <Link href="/cadastro">Criar Conta Grátis</Link>
-          </Button>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="py-12 bg-gray-900 text-white">
-        <div className="container">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div className="flex flex-col gap-4">
-              <Link href="/" className="flex items-center gap-2">
-                <Image
-                  src="/images/Logo.png"
-                  alt="PlanEats Logo"
-                  width={32}
-                  height={32}
-                  className="rounded-full"
-                />
-                <span className="text-xl font-bold">
-                  Plan<span className="text-amber-500">Eats</span>
-                </span>
-              </Link>
-              <p className="text-gray-400">Transformando ingredientes em refeições deliciosas.</p>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Recursos</h3>
-              <ul className="space-y-2">
-                <li>
-                  <Link href="/login" className="text-gray-400 hover:text-white transition-colors">
-                    Meu Frigorífico
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/login" className="text-gray-400 hover:text-white transition-colors">
-                    Receitas Sugeridas
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/login" className="text-gray-400 hover:text-white transition-colors">
-                    Explorar Receitas
-                  </Link>
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Empresa</h3>
-              <ul className="space-y-2">
-                <li>
-                  <Link href="/sobre" className="text-gray-400 hover:text-white transition-colors">
-                    Sobre Nós
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/contato" className="text-gray-400 hover:text-white transition-colors">
-                    Contato
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/blog" className="text-gray-400 hover:text-white transition-colors">
-                    Blog
-                  </Link>
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Legal</h3>
-              <ul className="space-y-2">
-                <li>
-                  <Link href="/termos" className="text-gray-400 hover:text-white transition-colors">
-                    Termos de Uso
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/privacidade" className="text-gray-400 hover:text-white transition-colors">
-                    Política de Privacidade
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/cookies" className="text-gray-400 hover:text-white transition-colors">
-                    Política de Cookies
-                  </Link>
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="mt-12 pt-8 border-t border-gray-800 text-center text-gray-400">
-            <p>© 2025 PlanEats. Todos os direitos reservados.</p>
-          </div>
-        </div>
-      </footer>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
-  )
+  );
 }

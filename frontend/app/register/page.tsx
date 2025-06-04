@@ -82,7 +82,6 @@ export default function Cadastro() {
         }
         setError(errorMessage);
       }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       console.error('Registration error (raw):', err); 
       setError('Ocorreu um erro inesperado durante o registo. Por favor, tente novamente.');

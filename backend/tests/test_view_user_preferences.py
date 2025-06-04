@@ -1,5 +1,5 @@
 """
-Unit tests for US5.1 - Visualizar Preferências do Utilizador (View User Preferences)
+Unit tests for View User Preferences functionality
 Tests the GET /user/preferences endpoint and preference visualization functionality.
 """
 
@@ -11,8 +11,8 @@ from app.models.user_models import User
 from app.models.user_preference_models import UserPreference, UserPreferenceCreate
 from app.crud.crud_user_preferences import user_preference as crud_user_preferences
 
-class TestUS51ViewUserPreferences:
-    """Test US5.1: Visualizar Preferências do Utilizador"""
+class TestViewUserPreferences:
+    """Test View User Preferences functionality"""
     
     def test_ac_5_1_1_get_user_preferences_endpoint_requires_auth(self, client: TestClient):
         """

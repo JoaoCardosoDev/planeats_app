@@ -45,7 +45,7 @@ const ChartContainer = React.forwardRef<
 >(({ id, className, children, config, ...props }, ref) => {
   const uniqueId = React.useId()
   const chartId = `chart-${id || uniqueId.replace(/:/g, "")}`
-  
+
   return (
     <ChartContext.Provider value={{ config }}>
       <div
@@ -69,7 +69,7 @@ ChartContainer.displayName = "Chart"
 
 const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
   const colorConfig = Object.entries(config).filter(
-    ([_, configValue]) => configValue.theme || configValue.color
+    ([_, config]) => config.theme || config.color
   )
 
   if (!colorConfig.length) {
@@ -88,7 +88,7 @@ ${colorConfig
     const color =
       itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ||
       itemConfig.color
-       return color ? `  --color-${key}: ${color};` : null
+    return color ? `  --color-${key}: ${color};` : null
   })
   .join("\n")}
 }
@@ -103,7 +103,7 @@ ${colorConfig
 const ChartTooltip = RechartsPrimitive.Tooltip
 
 const ChartTooltipContent = React.forwardRef<
-HTMLDivElement,
+  HTMLDivElement,
   React.ComponentProps<typeof RechartsPrimitive.Tooltip> &
     React.ComponentProps<"div"> & {
       hideLabel?: boolean
@@ -145,7 +145,8 @@ HTMLDivElement,
         !labelKey && typeof label === "string"
           ? config[label as keyof typeof config]?.label || label
           : itemConfig?.label
-           if (labelFormatter) {
+
+      if (labelFormatter) {
         return (
           <div className={cn("font-medium", labelClassName)}>
             {labelFormatter(value, payload)}
@@ -171,6 +172,7 @@ HTMLDivElement,
     if (!active || !payload?.length) {
       return null
     }
+
     const nestLabel = payload.length === 1 && indicator !== "dot"
 
     return (
@@ -187,7 +189,7 @@ HTMLDivElement,
             const key = `${nameKey || item.name || item.dataKey || "value"}`
             const itemConfig = getPayloadConfigFromPayload(config, item, key)
             const indicatorColor = color || item.payload.fill || item.color
-            
+
             return (
               <div
                 key={item.dataKey}
@@ -236,7 +238,7 @@ HTMLDivElement,
                           {itemConfig?.label || item.name}
                         </span>
                       </div>
-                       {item.value && (
+                      {item.value && (
                         <span className="font-mono font-medium tabular-nums text-foreground">
                           {item.value.toLocaleString()}
                         </span>
@@ -257,7 +259,7 @@ ChartTooltipContent.displayName = "ChartTooltip"
 const ChartLegend = RechartsPrimitive.Legend
 
 const ChartLegendContent = React.forwardRef<
-HTMLDivElement,
+  HTMLDivElement,
   React.ComponentProps<"div"> &
     Pick<RechartsPrimitive.LegendProps, "payload" | "verticalAlign"> & {
       hideIcon?: boolean
@@ -273,7 +275,7 @@ HTMLDivElement,
     if (!payload?.length) {
       return null
     }
-    
+
     return (
       <div
         ref={ref}
@@ -332,6 +334,7 @@ function getPayloadConfigFromPayload(
       : undefined
 
   let configLabelKey: string = key
+
   if (
     key in payload &&
     typeof payload[key as keyof typeof payload] === "string"

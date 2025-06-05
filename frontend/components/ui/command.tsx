@@ -22,6 +22,7 @@ const Command = React.forwardRef<
   />
 ))
 Command.displayName = CommandPrimitive.displayName
+
 const CommandDialog = ({ children, ...props }: DialogProps) => {
   return (
     <Dialog {...props}>
@@ -50,6 +51,7 @@ const CommandInput = React.forwardRef<
     />
   </div>
 ))
+
 CommandInput.displayName = CommandPrimitive.Input.displayName
 
 const CommandList = React.forwardRef<
@@ -64,6 +66,7 @@ const CommandList = React.forwardRef<
 ))
 
 CommandList.displayName = CommandPrimitive.List.displayName
+
 const CommandEmpty = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive.Empty>,
   React.ComponentPropsWithoutRef<typeof CommandPrimitive.Empty>
@@ -90,6 +93,7 @@ const CommandGroup = React.forwardRef<
     {...props}
   />
 ))
+
 CommandGroup.displayName = CommandPrimitive.Group.displayName
 
 const CommandSeparator = React.forwardRef<

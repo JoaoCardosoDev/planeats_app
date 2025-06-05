@@ -2,25 +2,20 @@
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { CheckCircle2, ChefHat, ClipboardList, Clock, Star } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import Image from "next/image";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import AuthStatus from "@/components/auth/AuthStatus"; // Import AuthStatus
+import { CheckCircle2, ChefHat, ClipboardList, Clock, Star } from "lucide-react"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import Image from "next/image"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
 
 export default function Home() {
-  const router = useRouter();
+  const router = useRouter()
 
   return (
-    <div className="flex flex-col min-h-screen bg-green-50">
-      <div className="container mx-auto p-4"> {/* Added a container for AuthStatus */}
-        <AuthStatus /> {/* Added AuthStatus component */}
-      </div>
-
+    <div className="flex flex-col min-h-screen">
       {/* Hero Section */}
-      <section className="py-16 md:py-24 bg-green-50">
-        <div className="container grid gap-8 md:grid-cols-2 md:gap-16 items-center">
+      <section className="py-12 md:py-20">
+        <div className="container grid gap-6 md:grid-cols-2 md:gap-12 items-center">
           <div className="flex flex-col gap-4">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight">
               <span className="text-green-600">PLAN</span> SMARTER, <span className="text-amber-500">EAT</span> BETTER.
@@ -40,10 +35,9 @@ export default function Home() {
           </div>
           <div className="relative h-[400px] w-full rounded-xl overflow-hidden shadow-xl">
             <Image
-              src="/images/Initial.png"
+              src="/images/Initial.png?height=400&width=600"
               alt="Frigorífico organizado com alimentos frescos"
-              width={600}
-              height={400}
+              fill
               className="object-cover"
               priority
             />
@@ -121,7 +115,7 @@ export default function Home() {
             <Card className="overflow-hidden">
               <div className="relative h-48 w-full">
                 <Image
-                  src="/images/Arroz de Frango.png"
+                  src="/images/Arroz de Frango.png?height=192&width=384"
                   alt="Arroz de Frango"
                   fill
                   className="object-cover"
@@ -149,7 +143,7 @@ export default function Home() {
             <Card className="overflow-hidden">
               <div className="relative h-48 w-full">
                 <Image
-                  src="/images/Salada de Tomate com Queijo.png"
+                  src="/images/Salada de Tomate com Queijo.png?height=192&width=384"
                   alt="Salada de Tomate com Queijo"
                   fill
                   className="object-cover"
@@ -177,7 +171,7 @@ export default function Home() {
             <Card className="overflow-hidden">
               <div className="relative h-48 w-full">
                 <Image
-                  src="/images/Omelete de Tomate e Cebola.png"
+                  src="/images/Omelete de Tomate e Cebola.png?height=192&width=384"
                   alt="Omelete de Tomate e Cebola"
                   fill
                   className="object-cover"
@@ -233,8 +227,8 @@ export default function Home() {
                     ))}
                   </div>
                   <p className="italic">
-                    &quot;O PlanEats revolucionou minha forma de cozinhar. Agora consigo aproveitar todos os ingredientes da
-                    minha geladeira e descobrir receitas incríveis!&quot;
+                    "O PlanEats revolucionou minha forma de cozinhar. Agora consigo aproveitar todos os ingredientes da
+                    minha geladeira e descobrir receitas incríveis!"
                   </p>
                   <div className="flex items-center gap-3 mt-2">
                     <Avatar className="h-10 w-10">
@@ -258,8 +252,8 @@ export default function Home() {
                     ))}
                   </div>
                   <p className="italic">
-                    &quot;Reduzi o desperdício de alimentos em casa em mais de 70% desde que comecei a usar o PlanEats. As
-                    receitas são deliciosas e fáceis de preparar!&quot;
+                    "Reduzi o desperdício de alimentos em casa em mais de 70% desde que comecei a usar o PlanEats. As
+                    receitas são deliciosas e fáceis de preparar!"
                   </p>
                   <div className="flex items-center gap-3 mt-2">
                     <Avatar className="h-10 w-10">
@@ -283,8 +277,8 @@ export default function Home() {
                     ))}
                   </div>
                   <p className="italic">
-                    &quot;Como estudante, o PlanEats me ajuda a economizar dinheiro e tempo. Consigo preparar refeições
-                    deliciosas com o que tenho disponível!&quot;
+                    "Como estudante, o PlanEats me ajuda a economizar dinheiro e tempo. Consigo preparar refeições
+                    deliciosas com o que tenho disponível!"
                   </p>
                   <div className="flex items-center gap-3 mt-2">
                     <Avatar className="h-10 w-10">
@@ -323,10 +317,10 @@ export default function Home() {
             <div className="flex flex-col gap-4">
               <Link href="/" className="flex items-center gap-2">
                 <Image
-                  src="/images/Logo.png"
+                  src="/images/Globo.png?height=32&width=32"
                   alt="PlanEats Logo"
-                  width={32}
-                  height={32}
+                  width={40}
+                  height={40}
                   className="rounded-full"
                 />
                 <span className="text-xl font-bold">

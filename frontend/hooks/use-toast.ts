@@ -26,6 +26,7 @@ const actionTypes = {
 } as const
 
 let count = 0
+
 function genId() {
   count = (count + 1) % Number.MAX_SAFE_INTEGER
   return count.toString()
@@ -45,7 +46,7 @@ type Action =
   | {
       type: ActionType["DISMISS_TOAST"]
       toastId?: ToasterToast["id"]
-       }
+    }
   | {
       type: ActionType["REMOVE_TOAST"]
       toastId?: ToasterToast["id"]
@@ -61,7 +62,8 @@ const addToRemoveQueue = (toastId: string) => {
   if (toastTimeouts.has(toastId)) {
     return
   }
- const timeout = setTimeout(() => {
+
+  const timeout = setTimeout(() => {
     toastTimeouts.delete(toastId)
     dispatch({
       type: "REMOVE_TOAST",
@@ -83,7 +85,7 @@ export const reducer = (state: State, action: Action): State => {
     case "UPDATE_TOAST":
       return {
         ...state,
-         toasts: state.toasts.map((t) =>
+        toasts: state.toasts.map((t) =>
           t.id === action.toast.id ? { ...t, ...action.toast } : t
         ),
       }
@@ -103,7 +105,7 @@ export const reducer = (state: State, action: Action): State => {
 
       return {
         ...state,
-         toasts: state.toasts.map((t) =>
+        toasts: state.toasts.map((t) =>
           t.id === toastId || toastId === undefined
             ? {
                 ...t,
@@ -123,7 +125,7 @@ export const reducer = (state: State, action: Action): State => {
       return {
         ...state,
         toasts: state.toasts.filter((t) => t.id !== action.toastId),
-              }
+      }
   }
 }
 
@@ -142,7 +144,7 @@ type Toast = Omit<ToasterToast, "id">
 
 function toast({ ...props }: Toast) {
   const id = genId()
-  
+
   const update = (props: ToasterToast) =>
     dispatch({
       type: "UPDATE_TOAST",
@@ -163,7 +165,7 @@ function toast({ ...props }: Toast) {
   })
 
   return {
-       id: id,
+    id: id,
     dismiss,
     update,
   }
@@ -183,7 +185,7 @@ function useToast() {
   }, [state])
 
   return {
-     ...state,
+    ...state,
     toast,
     dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
   }

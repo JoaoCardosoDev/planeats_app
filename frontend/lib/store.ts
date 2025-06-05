@@ -1,353 +1,445 @@
-"use client"
-
-import { create } from "zustand"
-import { persist } from "zustand/middleware"
+import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 
 export interface Ingredient {
   id: string
   name: string
   quantity: string
-  category: string
+  category: 'vegetais' | 'frutas' | 'proteinas' | 'graos' | 'laticinios' | 'temperos' | 'outros'
   expiryDate?: string
-  addedDate: string
-}
-
-export interface Comment {
-  id: string
-  author: string
-  avatar: string
-  content: string
-  rating: number
-  createdAt: string
-  replies?: Comment[]
 }
 
 export interface Recipe {
   id: string
-  title: string
+  name: string
   description: string
-  image: string
-  time: string
-  difficulty: string
-  rating: number
-  reviews: number
-  ingredients: string[]
-  instructions: string[]
+  image?: string
+  prepTime: number
+  cookTime: number
+  servings: number
+  difficulty: 'Fácil' | 'Médio' | 'Difícil'
   category: string
-  isFavorite: boolean
-  isOwn: boolean
-  author: string
+  ingredients: Array<{
+    name: string
+    quantity: string
+    unit: string
+  }>
+  instructions: string[]
+  tags: string[]
+  nutrition?: {
+    calories: number
+    protein: number
+    carbs: number
+    fat: number
+  }
   createdAt: string
-  comments: Comment[]
+  isFavorite: boolean
+}
+
+export interface ShoppingItem {
+  id: string
+  name: string
+  quantity: string
+  category: string
+  completed: boolean
+  recipeId?: string
+}
+
+export interface MealPlan {
+  id: string
+  date: string
+  meals: {
+    breakfast?: Recipe
+    lunch?: Recipe
+    dinner?: Recipe
+    snack?: Recipe
+  }
 }
 
 export interface User {
   id: string
   name: string
   email: string
-  avatar: string
-  isLoggedIn: boolean
-}
-
-export interface UserComment {
-  id: string
-  content: string
-  rating: number
+  avatar?: string
   createdAt: string
+  preferences: {
+    language: string
+    theme: 'light' | 'dark' | 'system'
+    notifications: {
+      email: boolean
+      push: boolean
+      marketing: boolean
+    }
+    privacy: {
+      publicProfile: boolean
+      shareRecipes: boolean
+      usageData: boolean
+    }
+    display: {
+      fontSize: 'pequeno' | 'medio' | 'grande'
+      metricSystem: boolean
+    }
+  }
 }
 
 interface AppState {
+  // User
   user: User | null
-  ingredients: Ingredient[]
-  recipes: Recipe[]
-  favoriteRecipes: string[]
-  userComments: UserComment[] | null
-
-  // User actions
-  login: (email: string, _password: string) => boolean
-  register: (name: string, email: string, _password: string) => boolean
+  login: (email: string, password: string) => Promise<boolean>
+  register: (name: string, email: string, password: string) => Promise<boolean>
   logout: () => void
-  updateUser: (userData: Partial<User>) => void
-
-  // Ingredient actions
-  addIngredient: (ingredient: Omit<Ingredient, "id" | "addedDate">) => void
-  updateIngredient: (id: string, ingredient: Partial<Ingredient>) => void
+  updateUser: (updates: Partial<User>) => void
+  updateUserPreferences: (preferences: Partial<User['preferences']>) => void
+  
+  // Ingredients
+  ingredients: Ingredient[]
+  addIngredient: (ingredient: Omit<Ingredient, 'id'>) => void
+  updateIngredient: (id: string, updates: Partial<Ingredient>) => void
   deleteIngredient: (id: string) => void
   getIngredientsByCategory: (category: string) => Ingredient[]
-
-  // Recipe actions
-  addRecipe: (recipe: Omit<Recipe, "id" | "createdAt" | "comments" | "rating" | "reviews">) => void
-  updateRecipe: (id: string, recipe: Partial<Recipe>) => void
+  
+  // Recipes
+  recipes: Recipe[]
+  addRecipe: (recipe: Omit<Recipe, 'id' | 'createdAt'>) => void
+  updateRecipe: (id: string, updates: Partial<Recipe>) => void
   deleteRecipe: (id: string) => void
-  toggleFavorite: (recipeId: string) => void
-  addComment: (recipeId: string, comment: Omit<Comment, "id" | "createdAt">) => void
-  updateRecipeRating: (recipeId: string, rating: number) => void
+  toggleFavoriteRecipe: (id: string) => void
+  getRecipeById: (id: string) => Recipe | undefined
   getRecipesByCategory: (category: string) => Recipe[]
-  searchRecipes: (query: string) => Recipe[]
-
-  addUserComment: (commentId: string, content: string, rating: number) => void
-  updateUserComment: (commentId: string, content: string, rating: number) => void
-  deleteUserComment: (commentId: string) => void
+  getFavoriteRecipes: () => Recipe[]
+  
+  // Shopping List
+  shoppingItems: ShoppingItem[]
+  addShoppingItem: (item: Omit<ShoppingItem, 'id'>) => void
+  updateShoppingItem: (id: string, updates: Partial<ShoppingItem>) => void
+  deleteShoppingItem: (id: string) => void
+  toggleShoppingItemCompleted: (id: string) => void
+  clearCompletedShoppingItems: () => void
+  
+  // Meal Planning
+  mealPlans: MealPlan[]
+  addMealPlan: (mealPlan: Omit<MealPlan, 'id'>) => void
+  updateMealPlan: (id: string, updates: Partial<MealPlan>) => void
+  deleteMealPlan: (id: string) => void
+  getMealPlanByDate: (date: string) => MealPlan | undefined
 }
-
-const initialRecipes: Recipe[] = [
-  {
-    id: "1",
-    title: "Arroz de Frango",
-    description: "Um prato completo de arroz com frango e legumes.",
-    image: "/images/recipes/arroz-frango.jpg",
-    time: "40 min",
-    difficulty: "Médio",
-    rating: 4.8,
-    reviews: 124,
-    ingredients: ["2 xícaras de arroz", "500g de frango", "1 cebola", "2 tomates", "Temperos a gosto"],
-    instructions: [
-      "Tempere o frango e deixe marinar por 30 minutos",
-      "Refogue a cebola e o alho em uma panela",
-      "Adicione o frango e deixe dourar",
-      "Acrescente o arroz e misture bem",
-      "Adicione água quente e deixe cozinhar por 20 minutos",
-    ],
-    category: "Almoço",
-    isFavorite: false,
-    isOwn: true,
-    author: "Maria Silva",
-    createdAt: "2024-01-15",
-    comments: [],
-  },
-  {
-    id: "2",
-    title: "Salada de Tomate com Queijo",
-    description: "Uma salada fresca e rápida de preparar.",
-    image: "/images/recipes/salada-tomate.jpg",
-    time: "10 min",
-    difficulty: "Fácil",
-    rating: 4.5,
-    reviews: 87,
-    ingredients: ["3 tomates grandes", "200g de queijo mussarela", "Manjericão fresco", "Azeite", "Sal e pimenta"],
-    instructions: [
-      "Corte os tomates em fatias grossas",
-      "Corte o queijo em fatias",
-      "Intercale tomate e queijo no prato",
-      "Tempere com sal, pimenta e azeite",
-      "Finalize com manjericão fresco",
-    ],
-    category: "Salada",
-    isFavorite: false,
-    isOwn: false,
-    author: "João Santos",
-    createdAt: "2024-01-10",
-    comments: [],
-  },
-]
 
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
+      // Initial state
       user: null,
       ingredients: [],
-      recipes: initialRecipes,
-      favoriteRecipes: [],
-      userComments: null,
-
-      // User actions
-      login: (email: string, _password: string) => {
-        const user: User = {
-          id: "1",
-          name: "Maria Silva",
-          email: email,
-          avatar: "/images/users/avatar1.jpg",
-          isLoggedIn: true,
+      recipes: [
+        {
+          id: '1',
+          name: 'Salada Caesar',
+          description: 'Uma deliciosa salada caesar com frango grelhado',
+          image: '/placeholder.jpg',
+          prepTime: 15,
+          cookTime: 10,
+          servings: 2,
+          difficulty: 'Fácil',
+          category: 'Saladas',
+          ingredients: [
+            { name: 'Alface romana', quantity: '1', unit: 'unidade' },
+            { name: 'Frango', quantity: '200', unit: 'g' },
+            { name: 'Parmesão', quantity: '50', unit: 'g' },
+            { name: 'Croutons', quantity: '1/2', unit: 'xícara' }
+          ],
+          instructions: [
+            'Lave e corte a alface',
+            'Grelhe o frango e corte em tiras',
+            'Monte a salada com todos os ingredientes',
+            'Regue com molho caesar'
+          ],
+          tags: ['saudável', 'proteína', 'rápido'],
+          nutrition: {
+            calories: 350,
+            protein: 25,
+            carbs: 15,
+            fat: 20
+          },
+          createdAt: new Date().toISOString(),
+          isFavorite: false
+        },
+        {
+          id: '2',
+          name: 'Macarrão à Carbonara',
+          description: 'Clássico macarrão italiano com molho cremoso',
+          image: '/placeholder.jpg',
+          prepTime: 10,
+          cookTime: 15,
+          servings: 4,
+          difficulty: 'Médio',
+          category: 'Massas',
+          ingredients: [
+            { name: 'Macarrão', quantity: '400', unit: 'g' },
+            { name: 'Bacon', quantity: '150', unit: 'g' },
+            { name: 'Ovos', quantity: '3', unit: 'unidades' },
+            { name: 'Parmesão', quantity: '100', unit: 'g' }
+          ],
+          instructions: [
+            'Cozinhe o macarrão al dente',
+            'Frite o bacon até ficar crocante',
+            'Misture ovos e queijo em uma tigela',
+            'Combine tudo rapidamente para criar o molho cremoso'
+          ],
+          tags: ['italiano', 'cremoso', 'clássico'],
+          nutrition: {
+            calories: 520,
+            protein: 22,
+            carbs: 45,
+            fat: 28
+          },
+          createdAt: new Date().toISOString(),
+          isFavorite: true
         }
-        set({ user })
-        return true
+      ],
+      shoppingItems: [],
+      mealPlans: [],
+
+      // Ingredient actions
+      addIngredient: (ingredient) =>
+        set((state) => ({
+          ingredients: [
+            ...state.ingredients,
+            { ...ingredient, id: crypto.randomUUID() }
+          ]
+        })),
+
+      updateIngredient: (id, updates) =>
+        set((state) => ({
+          ingredients: state.ingredients.map((ingredient) =>
+            ingredient.id === id ? { ...ingredient, ...updates } : ingredient
+          )
+        })),
+
+      deleteIngredient: (id) =>
+        set((state) => ({
+          ingredients: state.ingredients.filter((ingredient) => ingredient.id !== id)
+        })),
+
+      getIngredientsByCategory: (category) => {
+        const state = get()
+        if (category === 'todos') return state.ingredients
+        return state.ingredients.filter((ingredient) => ingredient.category === category)
       },
 
-      register: (name: string, email: string, _password: string) => {
-        const user: User = {
-          id: Date.now().toString(),
-          name: name,
-          email: email,
-          avatar: "/images/users/default-avatar.jpg",
-          isLoggedIn: true,
+      // Recipe actions
+      addRecipe: (recipe) =>
+        set((state) => ({
+          recipes: [
+            ...state.recipes,
+            {
+              ...recipe,
+              id: crypto.randomUUID(),
+              createdAt: new Date().toISOString()
+            }
+          ]
+        })),
+
+      updateRecipe: (id, updates) =>
+        set((state) => ({
+          recipes: state.recipes.map((recipe) =>
+            recipe.id === id ? { ...recipe, ...updates } : recipe
+          )
+        })),
+
+      deleteRecipe: (id) =>
+        set((state) => ({
+          recipes: state.recipes.filter((recipe) => recipe.id !== id)
+        })),
+
+      toggleFavoriteRecipe: (id) =>
+        set((state) => ({
+          recipes: state.recipes.map((recipe) =>
+            recipe.id === id ? { ...recipe, isFavorite: !recipe.isFavorite } : recipe
+          )
+        })),
+
+      getRecipeById: (id) => {
+        const state = get()
+        return state.recipes.find((recipe) => recipe.id === id)
+      },
+
+      getRecipesByCategory: (category) => {
+        const state = get()
+        return state.recipes.filter((recipe) => recipe.category === category)
+      },
+
+      getFavoriteRecipes: () => {
+        const state = get()
+        return state.recipes.filter((recipe) => recipe.isFavorite)
+      },
+
+      // Shopping list actions
+      addShoppingItem: (item) =>
+        set((state) => ({
+          shoppingItems: [
+            ...state.shoppingItems,
+            { ...item, id: crypto.randomUUID() }
+          ]
+        })),
+
+      updateShoppingItem: (id, updates) =>
+        set((state) => ({
+          shoppingItems: state.shoppingItems.map((item) =>
+            item.id === id ? { ...item, ...updates } : item
+          )
+        })),
+
+      deleteShoppingItem: (id) =>
+        set((state) => ({
+          shoppingItems: state.shoppingItems.filter((item) => item.id !== id)
+        })),
+
+      toggleShoppingItemCompleted: (id) =>
+        set((state) => ({
+          shoppingItems: state.shoppingItems.map((item) =>
+            item.id === id ? { ...item, completed: !item.completed } : item
+          )
+        })),
+
+      clearCompletedShoppingItems: () =>
+        set((state) => ({
+          shoppingItems: state.shoppingItems.filter((item) => !item.completed)
+        })),
+
+      // Meal planning actions
+      addMealPlan: (mealPlan) =>
+        set((state) => ({
+          mealPlans: [
+            ...state.mealPlans,
+            { ...mealPlan, id: crypto.randomUUID() }
+          ]
+        })),
+
+      updateMealPlan: (id, updates) =>
+        set((state) => ({
+          mealPlans: state.mealPlans.map((plan) =>
+            plan.id === id ? { ...plan, ...updates } : plan
+          )
+        })),
+
+      deleteMealPlan: (id) =>
+        set((state) => ({
+          mealPlans: state.mealPlans.filter((plan) => plan.id !== id)
+        })),      getMealPlanByDate: (date) => {
+        const state = get()
+        return state.mealPlans.find((plan) => plan.date === date)
+      },
+
+      // User actions
+      login: async (email, password) => {
+        // Simulação de login - em produção, isso seria uma chamada para o backend
+        try {
+          // Simular delay de rede
+          await new Promise(resolve => setTimeout(resolve, 1000))
+          
+          // Criar usuário simulado
+          const user: User = {
+            id: crypto.randomUUID(),
+            name: 'Usuário Teste',
+            email: email,
+            avatar: '/placeholder-user.jpg',
+            createdAt: new Date().toISOString(),
+            preferences: {
+              language: 'pt-BR',
+              theme: 'system',
+              notifications: {
+                email: true,
+                push: true,
+                marketing: false
+              },
+              privacy: {
+                publicProfile: true,
+                shareRecipes: true,
+                usageData: true
+              },
+              display: {
+                fontSize: 'medio',
+                metricSystem: true
+              }
+            }
+          }
+          
+          set({ user })
+          return true
+        } catch (error) {
+          console.error('Erro no login:', error)
+          return false
         }
-        set({ user })
-        return true
+      },
+
+      register: async (name, email, password) => {
+        // Simulação de registro - em produção, isso seria uma chamada para o backend
+        try {
+          // Simular delay de rede
+          await new Promise(resolve => setTimeout(resolve, 1000))
+          
+          // Criar novo usuário
+          const user: User = {
+            id: crypto.randomUUID(),
+            name: name,
+            email: email,
+            avatar: '/placeholder-user.jpg',
+            createdAt: new Date().toISOString(),
+            preferences: {
+              language: 'pt-BR',
+              theme: 'system',
+              notifications: {
+                email: true,
+                push: true,
+                marketing: false
+              },
+              privacy: {
+                publicProfile: true,
+                shareRecipes: true,
+                usageData: true
+              },
+              display: {
+                fontSize: 'medio',
+                metricSystem: true
+              }
+            }
+          }
+          
+          set({ user })
+          return true
+        } catch (error) {
+          console.error('Erro no registro:', error)
+          return false
+        }
       },
 
       logout: () => {
         set({ user: null })
       },
 
-      updateUser: (userData: Partial<User>) => {
-        const { user } = get()
-        if (user) {
-          set({ user: { ...user, ...userData } })
-        }
-      },
-
-      // Ingredient actions
-      addIngredient: (ingredient) => {
-        const newIngredient: Ingredient = {
-          ...ingredient,
-          id: Date.now().toString(),
-          addedDate: new Date().toISOString(),
-        }
+      updateUser: (updates) => {
         set((state) => ({
-          ingredients: [...state.ingredients, newIngredient],
+          user: state.user ? { ...state.user, ...updates } : null
         }))
       },
 
-      updateIngredient: (id, ingredient) => {
+      updateUserPreferences: (preferences) => {
         set((state) => ({
-          ingredients: state.ingredients.map((item) => (item.id === id ? { ...item, ...ingredient } : item)),
+          user: state.user ? {
+            ...state.user,
+            preferences: { ...state.user.preferences, ...preferences }
+          } : null
         }))
       },
-
-      deleteIngredient: (id) => {
-        set((state) => ({
-          ingredients: state.ingredients.filter((item) => item.id !== id),
-        }))
-      },
-
-      getIngredientsByCategory: (category) => {
-        const { ingredients } = get()
-        if (category === "todos" || category === "todas") return ingredients
-        return ingredients.filter((item) => item.category === category)
-      },
-
-      // Recipe actions
-      addRecipe: (recipe) => {
-        const newRecipe: Recipe = {
-          ...recipe,
-          id: Date.now().toString(),
-          createdAt: new Date().toISOString(),
-          comments: [],
-          rating: 0,
-          reviews: 0,
-        }
-        set((state) => ({
-          recipes: [...state.recipes, newRecipe],
-        }))
-      },
-
-      updateRecipe: (id, recipe) => {
-        set((state) => ({
-          recipes: state.recipes.map((item) => (item.id === id ? { ...item, ...recipe } : item)),
-        }))
-      },
-
-      deleteRecipe: (id) => {
-        set((state) => ({
-          recipes: state.recipes.filter((item) => item.id !== id),
-          favoriteRecipes: state.favoriteRecipes.filter((fav) => fav !== id),
-        }))
-      },
-
-      toggleFavorite: (recipeId) => {
-        set((state) => {
-          const isFavorite = state.favoriteRecipes.includes(recipeId)
-          const newFavorites = isFavorite
-            ? state.favoriteRecipes.filter((id) => id !== recipeId)
-            : [...state.favoriteRecipes, recipeId]
-
-          const updatedRecipes = state.recipes.map((recipe) =>
-            recipe.id === recipeId ? { ...recipe, isFavorite: !isFavorite } : recipe,
-          )
-
-          return {
-            favoriteRecipes: newFavorites,
-            recipes: updatedRecipes,
-          }
-        })
-      },
-
-      addComment: (recipeId, comment) => {
-        const newComment: Comment = {
-          ...comment,
-          id: Date.now().toString(),
-          createdAt: new Date().toISOString(),
-        }
-
-        set((state) => ({
-          recipes: state.recipes.map((recipe) =>
-            recipe.id === recipeId ? { ...recipe, comments: [...recipe.comments, newComment] } : recipe,
-          ),
-        }))
-      },
-
-      updateRecipeRating: (recipeId, rating) => {
-        set((state) => ({
-          recipes: state.recipes.map((recipe) => {
-            if (recipe.id === recipeId) {
-              const newReviews = recipe.reviews + 1
-              const newRating = (recipe.rating * recipe.reviews + rating) / newReviews
-              return { ...recipe, rating: newRating, reviews: newReviews }
-            }
-            return recipe
-          }),
-        }))
-      },
-
-      addUserComment: (commentId, content, rating) => {
-        set((state) => {
-          const userComments = state.userComments || []
-          const newComment: UserComment = {
-            id: commentId,
-            content,
-            rating,
-            createdAt: new Date().toISOString(),
-          }
-
-          return {
-            ...state,
-            userComments: [...userComments, newComment],
-          }
-        })
-      },
-
-      updateUserComment: (commentId, content, rating) => {
-        set((state) => {
-          const userComments = state.userComments || []
-          const updatedComments = userComments.map((comment) =>
-            comment.id === commentId ? { ...comment, content, rating } : comment,
-          )
-
-          return {
-            ...state,
-            userComments: updatedComments,
-          }
-        })
-      },
-
-      deleteUserComment: (commentId) => {
-        set((state) => {
-          const userComments = state.userComments || []
-          return {
-            ...state,
-            userComments: userComments.filter((comment) => comment.id !== commentId),
-          }
-        })
-      },
-
-      getRecipesByCategory: (category) => {
-        const { recipes } = get()
-        if (category === "todas" || category === "todos") return recipes
-        return recipes.filter((recipe) => recipe.category === category)
-      },
-
-      searchRecipes: (query) => {
-        const { recipes } = get()
-        return recipes.filter(
-          (recipe) =>
-            recipe.title.toLowerCase().includes(query.toLowerCase()) ||
-            recipe.description.toLowerCase().includes(query.toLowerCase()) ||
-            recipe.ingredients.some((ingredient) => ingredient.toLowerCase().includes(query.toLowerCase())),
-        )
-      },
-    }),
-    {
-      name: "planeats-storage",
-    },
-  ),
+    }),    {
+      name: 'planeats-storage',
+      partialize: (state) => ({
+        user: state.user,
+        ingredients: state.ingredients,
+        recipes: state.recipes,
+        shoppingItems: state.shoppingItems,
+        mealPlans: state.mealPlans,
+      }),
+    }
+  )
 )

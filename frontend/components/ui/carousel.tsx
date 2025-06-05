@@ -43,7 +43,7 @@ function useCarousel() {
 }
 
 const Carousel = React.forwardRef<
-HTMLDivElement,
+  HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement> & CarouselProps
 >(
   (
@@ -80,7 +80,7 @@ HTMLDivElement,
     const scrollPrev = React.useCallback(() => {
       api?.scrollPrev()
     }, [api])
-    
+
     const scrollNext = React.useCallback(() => {
       api?.scrollNext()
     }, [api])
@@ -102,7 +102,7 @@ HTMLDivElement,
       if (!api || !setApi) {
         return
       }
-      
+
       setApi(api)
     }, [api, setApi])
 
@@ -146,7 +146,7 @@ HTMLDivElement,
         </div>
       </CarouselContext.Provider>
     )
-     }
+  }
 )
 Carousel.displayName = "Carousel"
 
@@ -166,7 +166,7 @@ const CarouselContent = React.forwardRef<
           className
         )}
         {...props}
-        />
+      />
     </div>
   )
 })
@@ -191,7 +191,7 @@ const CarouselItem = React.forwardRef<
       {...props}
     />
   )
-  })
+})
 CarouselItem.displayName = "CarouselItem"
 
 const CarouselPrevious = React.forwardRef<
@@ -211,7 +211,7 @@ const CarouselPrevious = React.forwardRef<
           ? "-left-12 top-1/2 -translate-y-1/2"
           : "-top-12 left-1/2 -translate-x-1/2 rotate-90",
         className
-        )}
+      )}
       disabled={!canScrollPrev}
       onClick={scrollPrev}
       {...props}

@@ -1,3 +1,5 @@
+"use client"
+
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -7,8 +9,127 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Bell, Lock, Globe, Moon, Sun, Smartphone, Palette } from "lucide-react"
+import { useState, useEffect } from "react"
+import { useAppStore } from "@/lib/store"
+import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 
 export default function Configuracoes() {
+  const [settings, setSettings] = useState({
+    language: "pt-BR",
+    theme: "system",
+    emailNotifications: true,
+    pushNotifications: true,
+    marketingEmails: false,
+    twoFactorAuth: false,
+    publicProfile: true,
+    shareRecipes: true,
+    usageData: true,
+    fontSize: "medio",
+    metricSystem: true,
+  })
+
+  const [passwords, setPasswords] = useState({
+    current: "",
+    new: "",
+    confirm: "",
+  })
+
+  const { user, updateUser, logout } = useAppStore()
+  const router = useRouter()
+
+  // Aplicar tema
+  useEffect(() => {
+    const root = document.documentElement
+    if (settings.theme === "dark") {
+      root.classList.add("dark")
+    } else if (settings.theme === "light") {
+      root.classList.remove("dark")
+    } else {
+      // Sistema
+      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
+      if (mediaQuery.matches) {
+        root.classList.add("dark")
+      } else {
+        root.classList.remove("dark")
+      }
+    }
+  }, [settings.theme])
+
+  const handleSaveAccount = () => {
+    updateUser({
+      name: user?.name,
+      email: user?.email,
+    })
+    toast.success("Informações da conta atualizadas!")
+  }
+
+  const handleChangePassword = () => {
+    if (passwords.new !== passwords.confirm) {
+      toast.error("As senhas não coincidem")
+      return
+    }
+    if (passwords.new.length < 8) {
+      toast.error("A senha deve ter pelo menos 8 caracteres")
+      return
+    }
+    toast.success("Senha alterada com sucesso!")
+    setPasswords({ current: "", new: "", confirm: "" })
+  }
+
+  const handleDeleteAccount = () => {
+    if (confirm("Tem certeza que deseja excluir sua conta? Esta ação não pode ser desfeita.")) {
+      logout()
+      router.push("/")
+      toast.success("Conta excluída com sucesso")
+    }
+  }
+
+  const handleSaveNotifications = () => {
+    toast.success("Preferências de notificação salvas!")
+  }
+
+  const handleSaveAppearance = () => {
+    // Aplicar configurações de aparência
+    const root = document.documentElement
+
+    // Aplicar tamanho da fonte
+    root.style.fontSize = settings.fontSize === "pequeno" ? "14px" : settings.fontSize === "grande" ? "18px" : "16px"
+
+    toast.success("Preferências de aparência salvas!")
+  }
+
+  const handleSavePrivacy = () => {
+    // Aplicar configurações de privacidade
+    if (settings.twoFactorAuth) {
+      toast.success("Verificação em duas etapas ativada!")
+    }
+    toast.success("Configurações de privacidade salvas!")
+  }
+
+  const handleEndSession = (sessionId: string) => {
+    toast.success("Sessão encerrada com sucesso!")
+  }
+
+  const handleThemeChange = (theme: string) => {
+    setSettings({ ...settings, theme })
+    const root = document.documentElement
+
+    if (theme === "dark") {
+      root.classList.add("dark")
+    } else if (theme === "light") {
+      root.classList.remove("dark")
+    } else {
+      // Sistema
+      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
+      if (mediaQuery.matches) {
+        root.classList.add("dark")
+      } else {
+        root.classList.remove("dark")
+      }
+    }
+  }
+
   return (
     <div className="container py-8">
       <div className="flex flex-col gap-6">
@@ -36,16 +157,19 @@ export default function Configuracoes() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="nome-usuario">Nome de Usuário</Label>
-                      <Input id="nome-usuario" defaultValue="mariasilva" />
+                      <Input id="nome-usuario" defaultValue={user?.name || "mariasilva"} />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="email-conta">Email</Label>
-                      <Input id="email-conta" defaultValue="maria.silva@email.com" />
+                      <Input id="email-conta" defaultValue={user?.email || "maria.silva@email.com"} />
                     </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="idioma">Idioma</Label>
-                    <Select defaultValue="pt-BR">
+                    <Select
+                      value={settings.language}
+                      onValueChange={(value) => setSettings({ ...settings, language: value })}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione um idioma" />
                       </SelectTrigger>
@@ -58,7 +182,9 @@ export default function Configuracoes() {
                   </div>
                 </CardContent>
                 <CardFooter>
-                  <Button className="bg-green-600 hover:bg-green-700">Salvar Alterações</Button>
+                  <Button className="bg-green-600 hover:bg-green-700" onClick={handleSaveAccount}>
+                    Salvar Alterações
+                  </Button>
                 </CardFooter>
               </Card>
 
@@ -70,19 +196,36 @@ export default function Configuracoes() {
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="senha-atual">Senha Atual</Label>
-                    <Input id="senha-atual" type="password" />
+                    <Input
+                      id="senha-atual"
+                      type="password"
+                      value={passwords.current}
+                      onChange={(e) => setPasswords({ ...passwords, current: e.target.value })}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="nova-senha">Nova Senha</Label>
-                    <Input id="nova-senha" type="password" />
+                    <Input
+                      id="nova-senha"
+                      type="password"
+                      value={passwords.new}
+                      onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="confirmar-senha">Confirmar Nova Senha</Label>
-                    <Input id="confirmar-senha" type="password" />
+                    <Input
+                      id="confirmar-senha"
+                      type="password"
+                      value={passwords.confirm}
+                      onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
+                    />
                   </div>
                 </CardContent>
                 <CardFooter>
-                  <Button className="bg-green-600 hover:bg-green-700">Alterar Senha</Button>
+                  <Button className="bg-green-600 hover:bg-green-700" onClick={handleChangePassword}>
+                    Alterar Senha
+                  </Button>
                 </CardFooter>
               </Card>
 
@@ -98,7 +241,9 @@ export default function Configuracoes() {
                   </p>
                 </CardContent>
                 <CardFooter>
-                  <Button variant="destructive">Excluir Conta</Button>
+                  <Button variant="destructive" onClick={handleDeleteAccount}>
+                    Excluir Conta
+                  </Button>
                 </CardFooter>
               </Card>
             </div>
@@ -126,18 +271,11 @@ export default function Configuracoes() {
                           Receba emails quando novas receitas forem sugeridas com base nos seus ingredientes
                         </p>
                       </div>
-                      <Switch id="email-receitas" defaultChecked />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label htmlFor="email-dicas" className="text-base">
-                          Dicas e Truques
-                        </Label>
-                        <p className="text-sm text-muted-foreground">
-                          Receba emails com dicas culinárias e truques para aproveitar melhor os alimentos
-                        </p>
-                      </div>
-                      <Switch id="email-dicas" defaultChecked />
+                      <Switch
+                        id="email-receitas"
+                        checked={settings.emailNotifications}
+                        onCheckedChange={(checked) => setSettings({ ...settings, emailNotifications: checked })}
+                      />
                     </div>
                     <div className="flex items-center justify-between">
                       <div>
@@ -148,7 +286,11 @@ export default function Configuracoes() {
                           Receba emails sobre promoções, novidades e atualizações do PlanEats
                         </p>
                       </div>
-                      <Switch id="email-marketing" />
+                      <Switch
+                        id="email-marketing"
+                        checked={settings.marketingEmails}
+                        onCheckedChange={(checked) => setSettings({ ...settings, marketingEmails: checked })}
+                      />
                     </div>
                   </div>
                 </div>
@@ -168,38 +310,19 @@ export default function Configuracoes() {
                           Receba alertas quando alimentos estiverem próximos da data de validade
                         </p>
                       </div>
-                      <Switch id="app-alimentos" defaultChecked />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label htmlFor="app-receitas" className="text-base">
-                          Novas Receitas
-                        </Label>
-                        <p className="text-sm text-muted-foreground">
-                          Receba notificações quando novas receitas forem adicionadas
-                        </p>
-                      </div>
-                      <Switch id="app-receitas" defaultChecked />
+                      <Switch
+                        id="app-alimentos"
+                        checked={settings.pushNotifications}
+                        onCheckedChange={(checked) => setSettings({ ...settings, pushNotifications: checked })}
+                      />
                     </div>
                   </div>
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="frequencia">Frequência de Notificações</Label>
-                  <Select defaultValue="diaria">
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione a frequência" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="diaria">Diária</SelectItem>
-                      <SelectItem value="semanal">Semanal</SelectItem>
-                      <SelectItem value="mensal">Mensal</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
               </CardContent>
               <CardFooter>
-                <Button className="bg-green-600 hover:bg-green-700">Salvar Preferências</Button>
+                <Button className="bg-green-600 hover:bg-green-700" onClick={handleSaveNotifications}>
+                  Salvar Preferências
+                </Button>
               </CardFooter>
             </Card>
           </TabsContent>
@@ -217,15 +340,24 @@ export default function Configuracoes() {
                     Tema
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="flex flex-col items-center gap-2 border rounded-lg p-4 cursor-pointer hover:bg-muted/50">
+                    <div
+                      className={`flex flex-col items-center gap-2 border rounded-lg p-4 cursor-pointer hover:bg-muted/50 ${settings.theme === "light" ? "bg-muted/50 border-green-500" : ""}`}
+                      onClick={() => handleThemeChange("light")}
+                    >
                       <Sun className="h-8 w-8 text-amber-500" />
                       <span className="font-medium">Claro</span>
                     </div>
-                    <div className="flex flex-col items-center gap-2 border rounded-lg p-4 cursor-pointer hover:bg-muted/50">
+                    <div
+                      className={`flex flex-col items-center gap-2 border rounded-lg p-4 cursor-pointer hover:bg-muted/50 ${settings.theme === "dark" ? "bg-muted/50 border-green-500" : ""}`}
+                      onClick={() => handleThemeChange("dark")}
+                    >
                       <Moon className="h-8 w-8 text-indigo-500" />
                       <span className="font-medium">Escuro</span>
                     </div>
-                    <div className="flex flex-col items-center gap-2 border rounded-lg p-4 cursor-pointer hover:bg-muted/50 bg-muted/50">
+                    <div
+                      className={`flex flex-col items-center gap-2 border rounded-lg p-4 cursor-pointer hover:bg-muted/50 ${settings.theme === "system" ? "bg-muted/50 border-green-500" : ""}`}
+                      onClick={() => handleThemeChange("system")}
+                    >
                       <div className="flex">
                         <Sun className="h-8 w-8 text-amber-500" />
                         <Moon className="h-8 w-8 text-indigo-500 -ml-2" />
@@ -248,23 +380,21 @@ export default function Configuracoes() {
                         </Label>
                         <p className="text-sm text-muted-foreground">Usar gramas, quilos, mililitros, etc.</p>
                       </div>
-                      <Switch id="metrico" defaultChecked />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label htmlFor="imperial" className="text-base">
-                          Sistema Imperial
-                        </Label>
-                        <p className="text-sm text-muted-foreground">Usar onças, libras, xícaras, etc.</p>
-                      </div>
-                      <Switch id="imperial" />
+                      <Switch
+                        id="metrico"
+                        checked={settings.metricSystem}
+                        onCheckedChange={(checked) => setSettings({ ...settings, metricSystem: checked })}
+                      />
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="tamanho-fonte">Tamanho da Fonte</Label>
-                  <Select defaultValue="medio">
+                  <Select
+                    value={settings.fontSize}
+                    onValueChange={(value) => setSettings({ ...settings, fontSize: value })}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione o tamanho da fonte" />
                     </SelectTrigger>
@@ -277,7 +407,9 @@ export default function Configuracoes() {
                 </div>
               </CardContent>
               <CardFooter>
-                <Button className="bg-green-600 hover:bg-green-700">Salvar Preferências</Button>
+                <Button className="bg-green-600 hover:bg-green-700" onClick={handleSaveAppearance}>
+                  Salvar Preferências
+                </Button>
               </CardFooter>
             </Card>
           </TabsContent>
@@ -304,7 +436,11 @@ export default function Configuracoes() {
                           Permitir que outros usuários vejam seu perfil e receitas criadas
                         </p>
                       </div>
-                      <Switch id="perfil-publico" defaultChecked />
+                      <Switch
+                        id="perfil-publico"
+                        checked={settings.publicProfile}
+                        onCheckedChange={(checked) => setSettings({ ...settings, publicProfile: checked })}
+                      />
                     </div>
                     <div className="flex items-center justify-between">
                       <div>
@@ -315,7 +451,11 @@ export default function Configuracoes() {
                           Permitir que suas receitas criadas sejam compartilhadas com outros usuários
                         </p>
                       </div>
-                      <Switch id="compartilhar-receitas" defaultChecked />
+                      <Switch
+                        id="compartilhar-receitas"
+                        checked={settings.shareRecipes}
+                        onCheckedChange={(checked) => setSettings({ ...settings, shareRecipes: checked })}
+                      />
                     </div>
                     <div className="flex items-center justify-between">
                       <div>
@@ -326,7 +466,11 @@ export default function Configuracoes() {
                           Compartilhar dados de uso anônimos para melhorar o PlanEats
                         </p>
                       </div>
-                      <Switch id="dados-uso" defaultChecked />
+                      <Switch
+                        id="dados-uso"
+                        checked={settings.usageData}
+                        onCheckedChange={(checked) => setSettings({ ...settings, usageData: checked })}
+                      />
                     </div>
                   </div>
                 </div>
@@ -343,7 +487,11 @@ export default function Configuracoes() {
                           Adicione uma camada extra de segurança à sua conta
                         </p>
                       </div>
-                      <Switch id="verificacao-duas-etapas" />
+                      <Switch
+                        id="verificacao-duas-etapas"
+                        checked={settings.twoFactorAuth}
+                        onCheckedChange={(checked) => setSettings({ ...settings, twoFactorAuth: checked })}
+                      />
                     </div>
                   </div>
                 </div>
@@ -372,7 +520,7 @@ export default function Configuracoes() {
                           <p className="text-xs text-muted-foreground">Último acesso: Ontem, 19:45</p>
                         </div>
                       </div>
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" onClick={() => handleEndSession("session-2")}>
                         Encerrar
                       </Button>
                     </div>
@@ -380,7 +528,9 @@ export default function Configuracoes() {
                 </div>
               </CardContent>
               <CardFooter>
-                <Button className="bg-green-600 hover:bg-green-700">Salvar Configurações</Button>
+                <Button className="bg-green-600 hover:bg-green-700" onClick={handleSavePrivacy}>
+                  Salvar Configurações
+                </Button>
               </CardFooter>
             </Card>
           </TabsContent>
@@ -388,4 +538,13 @@ export default function Configuracoes() {
       </div>
     </div>
   )
+}
+
+export type AppState = {
+  // ...other properties
+  user?: {
+    name?: string
+    email?: string
+    // add other user fields as needed
+  }
 }

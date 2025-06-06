@@ -45,6 +45,7 @@ const MenubarTrigger = React.forwardRef<
   />
 ))
 MenubarTrigger.displayName = MenubarPrimitive.Trigger.displayName
+
 const MenubarSubTrigger = React.forwardRef<
   React.ElementRef<typeof MenubarPrimitive.SubTrigger>,
   React.ComponentPropsWithoutRef<typeof MenubarPrimitive.SubTrigger> & {
@@ -80,6 +81,7 @@ const MenubarSubContent = React.forwardRef<
   />
 ))
 MenubarSubContent.displayName = MenubarPrimitive.SubContent.displayName
+
 const MenubarContent = React.forwardRef<
   React.ElementRef<typeof MenubarPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof MenubarPrimitive.Content>
@@ -102,7 +104,7 @@ const MenubarContent = React.forwardRef<
       />
     </MenubarPrimitive.Portal>
   )
-  )
+)
 MenubarContent.displayName = MenubarPrimitive.Content.displayName
 
 const MenubarItem = React.forwardRef<

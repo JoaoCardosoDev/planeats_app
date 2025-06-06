@@ -21,7 +21,7 @@ const toggleVariants = cva(
         lg: "h-11 px-5 min-w-11",
       },
     },
-     defaultVariants: {
+    defaultVariants: {
       variant: "default",
       size: "default",
     },

@@ -23,9 +23,148 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
+import { useRouter } from "next/navigation"
 
 export default function Explorar() {
-  // const [showFilters, setShowFilters] = useState(false) // Commented out as per ESLint error: 'showFilters' and 'setShowFilters' are assigned a value but never used.
+  const [showFilters, setShowFilters] = useState(false)
+  const [displayedRecipes, setDisplayedRecipes] = useState(9)
+  const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter()
+
+  const recipes = [
+    {
+      id: "1",
+      title: "Arroz de Frango",
+      description: "Um prato completo de arroz com frango e legumes.",
+      image: "/placeholder.svg?height=192&width=384",
+      time: "40 min",
+      difficulty: "Médio",
+      rating: 4.8,
+      reviews: 124,
+    },
+    {
+      id: "2",
+      title: "Salada de Tomate com Queijo",
+      description: "Uma salada fresca e rápida de preparar.",
+      image: "/placeholder.svg?height=192&width=384",
+      time: "10 min",
+      difficulty: "Fácil",
+      rating: 4.5,
+      reviews: 87,
+    },
+    {
+      id: "3",
+      title: "Omelete de Tomate e Cebola",
+      description: "Um omelete simples e delicioso com tomate e cebola.",
+      image: "/placeholder.svg?height=192&width=384",
+      time: "15 min",
+      difficulty: "Fácil",
+      rating: 4.7,
+      reviews: 156,
+    },
+    {
+      id: "4",
+      title: "Sopa de Legumes",
+      description: "Uma sopa nutritiva com os legumes da sua geladeira.",
+      image: "/placeholder.svg?height=192&width=384",
+      time: "30 min",
+      difficulty: "Fácil",
+      rating: 4.3,
+      reviews: 92,
+    },
+    {
+      id: "5",
+      title: "Macarrão ao Molho Branco",
+      description: "Um macarrão cremoso com molho branco e queijo.",
+      image: "/placeholder.svg?height=192&width=384",
+      time: "25 min",
+      difficulty: "Médio",
+      rating: 4.6,
+      reviews: 108,
+    },
+    {
+      id: "6",
+      title: "Bolo de Cenoura",
+      description: "Um bolo fofinho de cenoura com cobertura de chocolate.",
+      image: "/placeholder.svg?height=192&width=384",
+      time: "50 min",
+      difficulty: "Médio",
+      rating: 4.9,
+      reviews: 203,
+    },
+    {
+      id: "7",
+      title: "Risoto de Cogumelos",
+      description: "Um risoto cremoso com cogumelos frescos.",
+      image: "/placeholder.svg?height=192&width=384",
+      time: "45 min",
+      difficulty: "Médio",
+      rating: 4.7,
+      reviews: 132,
+    },
+    {
+      id: "8",
+      title: "Panquecas de Banana",
+      description: "Panquecas fofas e saudáveis com banana.",
+      image: "/placeholder.svg?height=192&width=384",
+      time: "20 min",
+      difficulty: "Fácil",
+      rating: 4.4,
+      reviews: 76,
+    },
+    {
+      id: "9",
+      title: "Frango Assado com Batatas",
+      description: "Frango assado suculento com batatas douradas.",
+      image: "/placeholder.svg?height=192&width=384",
+      time: "60 min",
+      difficulty: "Médio",
+      rating: 4.8,
+      reviews: 167,
+    },
+    {
+      id: "10",
+      title: "Frango a parmegiana",
+      description: "Frango ao molho de tomate e queijo.",
+      image: "/placeholder.svg?height=192&width=384",
+      time: "60 min",
+      difficulty: "Médio",
+      rating: 4.8,
+      reviews: 167,
+    },
+    {
+      id: "11",
+      title: "Pudim de leite condensado",
+      description: "Pudinzinho cremoso.",
+      image: "/placeholder.svg?height=192&width=384",
+      time: "60 min",
+      difficulty: "Médio",
+      rating: 4.8,
+      reviews: 167,
+    },
+    {
+      id: "12",
+      title: "Mousse de maracujá",
+      description: "Mousse gostosinho.",
+      image: "/placeholder.svg?height=192&width=384",
+      time: "60 min",
+      difficulty: "Médio",
+      rating: 4.8,
+      reviews: 167,
+    },
+  ]
+
+  const loadMoreRecipes = () => {
+    setIsLoading(true)
+    setTimeout(() => {
+      setDisplayedRecipes((prev) => prev + 6)
+      setIsLoading(false)
+    }, 1000)
+  }
+
+  const handleRecipeClick = (recipeId: string) => {
+    router.push(`/receita/${recipeId}`)
+  }
 
   return (
     <div className="container py-8">
@@ -184,111 +323,18 @@ export default function Explorar() {
 
           <TabsContent value="todas" className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Receita 1 */}
-              <ExploreRecipeCard
-                title="Arroz de Frango"
-                description="Um prato completo de arroz com frango e legumes."
-                image="/placeholder.svg?height=192&width=384"
-                time="40 min"
-                difficulty="Médio"
-                rating={4.8}
-                reviews={124}
-              />
-
-              {/* Receita 2 */}
-              <ExploreRecipeCard
-                title="Salada de Tomate com Queijo"
-                description="Uma salada fresca e rápida de preparar."
-                image="/placeholder.svg?height=192&width=384"
-                time="10 min"
-                difficulty="Fácil"
-                rating={4.5}
-                reviews={87}
-              />
-
-              {/* Receita 3 */}
-              <ExploreRecipeCard
-                title="Omelete de Tomate e Cebola"
-                description="Um omelete simples e delicioso com tomate e cebola."
-                image="/placeholder.svg?height=192&width=384"
-                time="15 min"
-                difficulty="Fácil"
-                rating={4.7}
-                reviews={156}
-              />
-
-              {/* Receita 4 */}
-              <ExploreRecipeCard
-                title="Sopa de Legumes"
-                description="Uma sopa nutritiva com os legumes da sua geladeira."
-                image="/placeholder.svg?height=192&width=384"
-                time="30 min"
-                difficulty="Fácil"
-                rating={4.3}
-                reviews={92}
-              />
-
-              {/* Receita 5 */}
-              <ExploreRecipeCard
-                title="Macarrão ao Molho Branco"
-                description="Um macarrão cremoso com molho branco e queijo."
-                image="/placeholder.svg?height=192&width=384"
-                time="25 min"
-                difficulty="Médio"
-                rating={4.6}
-                reviews={108}
-              />
-
-              {/* Receita 6 */}
-              <ExploreRecipeCard
-                title="Bolo de Cenoura"
-                description="Um bolo fofinho de cenoura com cobertura de chocolate."
-                image="/placeholder.svg?height=192&width=384"
-                time="50 min"
-                difficulty="Médio"
-                rating={4.9}
-                reviews={203}
-              />
-
-              {/* Receita 7 */}
-              <ExploreRecipeCard
-                title="Risoto de Cogumelos"
-                description="Um risoto cremoso com cogumelos frescos."
-                image="/placeholder.svg?height=192&width=384"
-                time="45 min"
-                difficulty="Médio"
-                rating={4.7}
-                reviews={132}
-              />
-
-              {/* Receita 8 */}
-              <ExploreRecipeCard
-                title="Panquecas de Banana"
-                description="Panquecas fofas e saudáveis com banana."
-                image="/placeholder.svg?height=192&width=384"
-                time="20 min"
-                difficulty="Fácil"
-                rating={4.4}
-                reviews={76}
-              />
-
-              {/* Receita 9 */}
-              <ExploreRecipeCard
-                title="Frango Assado com Batatas"
-                description="Frango assado suculento com batatas douradas."
-                image="/placeholder.svg?height=192&width=384"
-                time="60 min"
-                difficulty="Médio"
-                rating={4.8}
-                reviews={167}
-              />
+              {recipes.slice(0, displayedRecipes).map((recipe) => (
+                <ExploreRecipeCard key={recipe.id} {...recipe} onClick={() => handleRecipeClick(recipe.id)} />
+              ))}
             </div>
 
-            <div className="flex justify-center mt-8">
-              <Button variant="outline" size="lg">
-                Carregar Mais Receitas
-              </Button>
-            </div>
+            {displayedRecipes < recipes.length && (
+              <div className="flex justify-center mt-8">
+                <Button variant="outline" size="lg" onClick={loadMoreRecipes} disabled={isLoading}>
+                  {isLoading ? "Carregando..." : "Carregar Mais Receitas"}
+                </Button>
+              </div>
+            )}
           </TabsContent>
 
           {/* Outros conteúdos de abas aqui */}
@@ -296,6 +342,7 @@ export default function Explorar() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {/* Receita 6 */}
               <ExploreRecipeCard
+                id="6"
                 title="Bolo de Cenoura"
                 description="Um bolo fofinho de cenoura com cobertura de chocolate."
                 image="/placeholder.svg?height=192&width=384"
@@ -303,10 +350,12 @@ export default function Explorar() {
                 difficulty="Médio"
                 rating={4.9}
                 reviews={203}
+                onClick={() => handleRecipeClick("6")}
               />
 
               {/* Receita 1 */}
               <ExploreRecipeCard
+                id="1"
                 title="Arroz de Frango"
                 description="Um prato completo de arroz com frango e legumes."
                 image="/placeholder.svg?height=192&width=384"
@@ -314,10 +363,12 @@ export default function Explorar() {
                 difficulty="Médio"
                 rating={4.8}
                 reviews={124}
+                onClick={() => handleRecipeClick("1")}
               />
 
               {/* Receita 9 */}
               <ExploreRecipeCard
+                id="9"
                 title="Frango Assado com Batatas"
                 description="Frango assado suculento com batatas douradas."
                 image="/placeholder.svg?height=192&width=384"
@@ -325,6 +376,7 @@ export default function Explorar() {
                 difficulty="Médio"
                 rating={4.8}
                 reviews={167}
+                onClick={() => handleRecipeClick("9")}
               />
             </div>
           </TabsContent>
@@ -335,6 +387,7 @@ export default function Explorar() {
 }
 
 interface ExploreRecipeCardProps {
+  id: string
   title: string
   description: string
   image: string
@@ -342,13 +395,24 @@ interface ExploreRecipeCardProps {
   difficulty: string
   rating: number
   reviews: number
+  onClick?: () => void
 }
 
-function ExploreRecipeCard({ title, description, image, time, difficulty, rating, reviews }: ExploreRecipeCardProps) {
+function ExploreRecipeCard({
+  id,
+  title,
+  description,
+  image,
+  time,
+  difficulty,
+  rating,
+  reviews,
+  onClick,
+}: ExploreRecipeCardProps) {
   const [favorite, setFavorite] = useState(false)
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow" onClick={onClick}>
       <CardHeader className="p-0">
         <div className="relative h-48 w-full">
           <Image src={image || "/placeholder.svg"} alt={title} fill className="object-cover" />
@@ -398,7 +462,15 @@ function ExploreRecipeCard({ title, description, image, time, difficulty, rating
         </div>
       </CardContent>
       <CardFooter className="p-4 pt-0">
-        <Button className="w-full bg-green-600 hover:bg-green-700">Ver Receita</Button>
+        <Button
+          className="w-full bg-green-600 hover:bg-green-700"
+          onClick={(e) => {
+            e.stopPropagation()
+            onClick?.()
+          }}
+        >
+          Ver Receita
+        </Button>
       </CardFooter>
     </Card>
   )

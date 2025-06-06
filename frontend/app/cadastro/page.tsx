@@ -27,17 +27,28 @@ export default function Cadastro() {
     setIsLoading(true)
 
     try {
-      // Aqui você pode implementar a lógica de registro
-      // Por enquanto, vamos simular um registro bem-sucedido
-      // Em produção, isso seria uma chamada para sua API
-      
-      // Simular delay de rede
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      toast.success("Conta criada com sucesso! Faça login para continuar.")
-      router.push("/login")
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          username: name,
+        }),
+      })
+
+      if (response.ok) {
+        toast.success("Conta criada com sucesso! Faça login para continuar.")
+        router.push("/login")
+      } else {
+        const errorData = await response.json()
+        toast.error(errorData.detail || "Erro ao criar conta")
+      }
     } catch (error) {
-      toast.error("Erro ao criar conta")
+      console.error("Erro na criação da conta:", error)
+      toast.error("Erro ao criar conta. Verifique sua conexão.")
     } finally {
       setIsLoading(false)
     }

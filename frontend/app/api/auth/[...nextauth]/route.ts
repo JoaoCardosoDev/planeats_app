@@ -23,8 +23,8 @@ export const authOptions: NextAuthOptions = {
         // Aqui você pode integrar com seu backend FastAPI
         // Por agora, vou simular uma validação básica
         try {
-          // Exemplo de chamada para seu backend FastAPI
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
+          // Call to FastAPI backend
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/login`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -38,10 +38,10 @@ export const authOptions: NextAuthOptions = {
           if (response.ok) {
             const user = await response.json()
             return {
-              id: user.id,
+              id: user.id.toString(),
               email: user.email,
-              name: user.name,
-              image: user.avatar,
+              name: user.username,
+              accessToken: user.access_token,
             }
           }
         } catch (error) {
@@ -68,12 +68,14 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id
+        token.accessToken = (user as any).accessToken
       }
       return token
     },
     async session({ session, token }) {
       if (token && session.user) {
         (session.user as any).id = token.id as string
+        ;(session as any).accessToken = token.accessToken
       }
       return session
     },

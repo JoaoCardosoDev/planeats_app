@@ -4,15 +4,10 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Slider } from "@/components/ui/slider"
-import { Clock, ChefHat, Search, Filter, Heart, BookmarkPlus, Star } from "lucide-react"
+import { Clock, ChefHat, Search, Filter, Heart, BookmarkPlus, Star, AlertCircle } from "lucide-react"
 import Image from "next/image"
-import { useState } from "react"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
+import { useState, useEffect } from "react"
 import {
   Sheet,
   SheetClose,
@@ -23,148 +18,105 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useRouter } from "next/navigation"
+import { recipeAPI, Recipe, RecipeFilter } from "@/lib/api/recipes"
+import RecipeFilters from "@/components/recipes/RecipeFilters"
+import { toast } from "sonner"
 
 export default function Explorar() {
-  const [showFilters, setShowFilters] = useState(false)
-  const [displayedRecipes, setDisplayedRecipes] = useState(9)
+  const [recipes, setRecipes] = useState<Recipe[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [isInitialLoading, setIsInitialLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [currentFilters, setCurrentFilters] = useState<RecipeFilter>({})
+  const [searchTerm, setSearchTerm] = useState("")
+  const [total, setTotal] = useState(0)
+  const [skip, setSkip] = useState(0)
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false)
   const router = useRouter()
 
-  const recipes = [
-    {
-      id: "1",
-      title: "Arroz de Frango",
-      description: "Um prato completo de arroz com frango e legumes.",
-      image: "/placeholder.svg?height=192&width=384",
-      time: "40 min",
-      difficulty: "Médio",
-      rating: 4.8,
-      reviews: 124,
-    },
-    {
-      id: "2",
-      title: "Salada de Tomate com Queijo",
-      description: "Uma salada fresca e rápida de preparar.",
-      image: "/placeholder.svg?height=192&width=384",
-      time: "10 min",
-      difficulty: "Fácil",
-      rating: 4.5,
-      reviews: 87,
-    },
-    {
-      id: "3",
-      title: "Omelete de Tomate e Cebola",
-      description: "Um omelete simples e delicioso com tomate e cebola.",
-      image: "/placeholder.svg?height=192&width=384",
-      time: "15 min",
-      difficulty: "Fácil",
-      rating: 4.7,
-      reviews: 156,
-    },
-    {
-      id: "4",
-      title: "Sopa de Legumes",
-      description: "Uma sopa nutritiva com os legumes da sua geladeira.",
-      image: "/placeholder.svg?height=192&width=384",
-      time: "30 min",
-      difficulty: "Fácil",
-      rating: 4.3,
-      reviews: 92,
-    },
-    {
-      id: "5",
-      title: "Macarrão ao Molho Branco",
-      description: "Um macarrão cremoso com molho branco e queijo.",
-      image: "/placeholder.svg?height=192&width=384",
-      time: "25 min",
-      difficulty: "Médio",
-      rating: 4.6,
-      reviews: 108,
-    },
-    {
-      id: "6",
-      title: "Bolo de Cenoura",
-      description: "Um bolo fofinho de cenoura com cobertura de chocolate.",
-      image: "/placeholder.svg?height=192&width=384",
-      time: "50 min",
-      difficulty: "Médio",
-      rating: 4.9,
-      reviews: 203,
-    },
-    {
-      id: "7",
-      title: "Risoto de Cogumelos",
-      description: "Um risoto cremoso com cogumelos frescos.",
-      image: "/placeholder.svg?height=192&width=384",
-      time: "45 min",
-      difficulty: "Médio",
-      rating: 4.7,
-      reviews: 132,
-    },
-    {
-      id: "8",
-      title: "Panquecas de Banana",
-      description: "Panquecas fofas e saudáveis com banana.",
-      image: "/placeholder.svg?height=192&width=384",
-      time: "20 min",
-      difficulty: "Fácil",
-      rating: 4.4,
-      reviews: 76,
-    },
-    {
-      id: "9",
-      title: "Frango Assado com Batatas",
-      description: "Frango assado suculento com batatas douradas.",
-      image: "/placeholder.svg?height=192&width=384",
-      time: "60 min",
-      difficulty: "Médio",
-      rating: 4.8,
-      reviews: 167,
-    },
-    {
-      id: "10",
-      title: "Frango a parmegiana",
-      description: "Frango ao molho de tomate e queijo.",
-      image: "/placeholder.svg?height=192&width=384",
-      time: "60 min",
-      difficulty: "Médio",
-      rating: 4.8,
-      reviews: 167,
-    },
-    {
-      id: "11",
-      title: "Pudim de leite condensado",
-      description: "Pudinzinho cremoso.",
-      image: "/placeholder.svg?height=192&width=384",
-      time: "60 min",
-      difficulty: "Médio",
-      rating: 4.8,
-      reviews: 167,
-    },
-    {
-      id: "12",
-      title: "Mousse de maracujá",
-      description: "Mousse gostosinho.",
-      image: "/placeholder.svg?height=192&width=384",
-      time: "60 min",
-      difficulty: "Médio",
-      rating: 4.8,
-      reviews: 167,
-    },
-  ]
+  const LIMIT = 12
+
+  // Load recipes on component mount and when filters change
+  useEffect(() => {
+    loadRecipes(true)
+  }, [currentFilters])
+
+  const loadRecipes = async (resetPagination = false) => {
+    try {
+      if (resetPagination) {
+        setSkip(0)
+        setIsInitialLoading(true)
+      } else {
+        setIsLoading(true)
+      }
+      setError(null)
+
+      const newSkip = resetPagination ? 0 : skip
+      const filters: RecipeFilter = {
+        ...currentFilters,
+        skip: newSkip,
+        limit: LIMIT
+      }
+
+      const response = await recipeAPI.getRecipes(filters)
+      
+      if (resetPagination) {
+        setRecipes(response.recipes)
+      } else {
+        setRecipes(prev => [...prev, ...response.recipes])
+      }
+      
+      setTotal(response.total)
+      setSkip(newSkip + response.recipes.length)
+      
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar receitas'
+      setError(errorMessage)
+      toast.error('Erro ao carregar receitas', {
+        description: errorMessage
+      })
+    } finally {
+      setIsLoading(false)
+      setIsInitialLoading(false)
+    }
+  }
+
+  const handleFiltersChange = (filters: RecipeFilter) => {
+    setCurrentFilters(filters)
+  }
+
+  const handleClearFilters = () => {
+    setCurrentFilters({})
+  }
 
   const loadMoreRecipes = () => {
-    setIsLoading(true)
-    setTimeout(() => {
-      setDisplayedRecipes((prev) => prev + 6)
-      setIsLoading(false)
-    }, 1000)
+    if (skip < total) {
+      loadRecipes(false)
+    }
   }
 
-  const handleRecipeClick = (recipeId: string) => {
+  const handleRecipeClick = (recipeId: number) => {
     router.push(`/receita/${recipeId}`)
   }
+
+  const formatTime = (minutes?: number) => {
+    if (!minutes) return "Tempo não informado"
+    if (minutes < 60) return `${minutes} min`
+    const hours = Math.floor(minutes / 60)
+    const remainingMinutes = minutes % 60
+    return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}min` : `${hours}h`
+  }
+
+  const getDifficulty = (minutes?: number) => {
+    if (!minutes) return "Não informado"
+    if (minutes <= 20) return "Fácil"
+    if (minutes <= 45) return "Médio"
+    return "Difícil"
+  }
+
+  const hasMoreRecipes = skip < total
 
   return (
     <div className="container py-8">
@@ -183,117 +135,39 @@ export default function Explorar() {
           </div>
           <div className="flex gap-2">
             <Sheet>
-              <SheetTrigger asChild>
+                <SheetTrigger asChild>
                 <Button variant="outline" className="gap-2">
                   <Filter className="h-4 w-4" />
                   Filtros
+                  {Object.keys(currentFilters).length > 0 && (
+                    <span className="ml-1 px-1.5 py-0.5 text-xs bg-green-100 text-green-700 rounded-full">
+                      {Object.keys(currentFilters).length}
+                    </span>
+                  )}
                 </Button>
               </SheetTrigger>
               <SheetContent className="sm:max-w-md">
                 <SheetHeader>
-                  <SheetTitle>Filtros</SheetTitle>
-                  <SheetDescription>Refine sua busca por receitas</SheetDescription>
+                  <SheetTitle>Filtros de Receitas</SheetTitle>
+                  <SheetDescription>
+                    Use os filtros abaixo para encontrar receitas específicas
+                  </SheetDescription>
                 </SheetHeader>
-                <div className="py-6 space-y-6">
-                  <div className="space-y-3">
-                    <h3 className="text-sm font-medium">Tempo de Preparo</h3>
-                    <div className="space-y-1">
-                      <div className="flex justify-between">
-                        <span className="text-xs">Rápido</span>
-                        <span className="text-xs">Demorado</span>
-                      </div>
-                      <Slider defaultValue={[50]} max={120} step={5} />
-                      <div className="text-center text-xs text-muted-foreground">Até 60 minutos</div>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  <div className="space-y-3">
-                    <h3 className="text-sm font-medium">Dificuldade</h3>
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="difficulty-easy" />
-                        <Label htmlFor="difficulty-easy">Fácil</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="difficulty-medium" />
-                        <Label htmlFor="difficulty-medium">Médio</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="difficulty-hard" />
-                        <Label htmlFor="difficulty-hard">Difícil</Label>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  <div className="space-y-3">
-                    <h3 className="text-sm font-medium">Categorias</h3>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="category-breakfast" />
-                        <Label htmlFor="category-breakfast">Café da Manhã</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="category-lunch" />
-                        <Label htmlFor="category-lunch">Almoço</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="category-dinner" />
-                        <Label htmlFor="category-dinner">Jantar</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="category-dessert" />
-                        <Label htmlFor="category-dessert">Sobremesa</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="category-snack" />
-                        <Label htmlFor="category-snack">Lanche</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="category-vegetarian" />
-                        <Label htmlFor="category-vegetarian">Vegetariano</Label>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  <div className="space-y-3">
-                    <h3 className="text-sm font-medium">Ingredientes</h3>
-                    <div className="space-y-2">
-                      <Input placeholder="Adicionar ingrediente" />
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        <Badge variant="secondary" className="flex items-center gap-1">
-                          Frango
-                          <button className="ml-1 h-3 w-3 rounded-full bg-muted-foreground/30 text-muted-foreground">
-                            ×
-                          </button>
-                        </Badge>
-                        <Badge variant="secondary" className="flex items-center gap-1">
-                          Arroz
-                          <button className="ml-1 h-3 w-3 rounded-full bg-muted-foreground/30 text-muted-foreground">
-                            ×
-                          </button>
-                        </Badge>
-                        <Badge variant="secondary" className="flex items-center gap-1">
-                          Tomate
-                          <button className="ml-1 h-3 w-3 rounded-full bg-muted-foreground/30 text-muted-foreground">
-                            ×
-                          </button>
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
+                <div className="py-6">
+                  <RecipeFilters 
+                    onFiltersChange={handleFiltersChange}
+                    onClearFilters={handleClearFilters}
+                    isLoading={isLoading}
+                  />
                 </div>
                 <SheetFooter>
                   <SheetClose asChild>
-                    <Button variant="outline">Limpar Filtros</Button>
-                  </SheetClose>
-                  <SheetClose asChild>
-                    <Button className="bg-green-600 hover:bg-green-700">Aplicar Filtros</Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setIsFilterSheetOpen(false)}
+                    >
+                      Fechar
+                    </Button>
                   </SheetClose>
                 </SheetFooter>
               </SheetContent>
@@ -312,75 +186,114 @@ export default function Explorar() {
           </div>
         </div>
 
-        <Tabs defaultValue="todas" className="w-full">
-          <TabsList className="mb-4">
-            <TabsTrigger value="todas">Todas</TabsTrigger>
-            <TabsTrigger value="populares">Populares</TabsTrigger>
-            <TabsTrigger value="saudaveis">Saudáveis</TabsTrigger>
-            <TabsTrigger value="rapidas">Rápidas</TabsTrigger>
-            <TabsTrigger value="sobremesas">Sobremesas</TabsTrigger>
-          </TabsList>
+        {/* Active Filters Display */}
+        {Object.keys(currentFilters).length > 0 && (
+          <div className="bg-muted/50 p-4 rounded-lg">
+            <h3 className="text-sm font-medium mb-2">Filtros Ativos:</h3>
+            <div className="flex flex-wrap gap-2 text-sm">
+              {currentFilters.user_created_only && (
+                <span className="px-2 py-1 bg-green-100 text-green-700 rounded">
+                  Apenas minhas receitas
+                </span>
+              )}
+              {currentFilters.max_calories && (
+                <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">
+                  Máx. {currentFilters.max_calories} cal
+                </span>
+              )}
+              {currentFilters.max_prep_time && (
+                <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded">
+                  Máx. {currentFilters.max_prep_time} min
+                </span>
+              )}
+              {currentFilters.ingredients && currentFilters.ingredients.length > 0 && (
+                <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded">
+                  Ingredientes: {currentFilters.ingredients.join(", ")}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
 
-          <TabsContent value="todas" className="space-y-4">
+        {/* Error Display */}
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              {error}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="ml-2"
+                onClick={() => loadRecipes(true)}
+              >
+                Tentar Novamente
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Loading State */}
+        {isInitialLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="animate-pulse">
+                <div className="bg-muted rounded-lg h-48 mb-4"></div>
+                <div className="bg-muted rounded h-4 w-3/4 mb-2"></div>
+                <div className="bg-muted rounded h-4 w-1/2"></div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <>
+            {/* Results Count */}
+            <div className="text-sm text-muted-foreground">
+              {total === 0 ? 'Nenhuma receita encontrada' : 
+               total === 1 ? '1 receita encontrada' : 
+               `${total} receitas encontradas`}
+            </div>
+
+            {/* Recipe Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {recipes.slice(0, displayedRecipes).map((recipe) => (
-                <ExploreRecipeCard key={recipe.id} {...recipe} onClick={() => handleRecipeClick(recipe.id)} />
+              {recipes.map((recipe) => (
+                <ExploreRecipeCard 
+                  key={recipe.id} 
+                  id={recipe.id.toString()}
+                  title={recipe.title}
+                  description={recipe.description || "Sem descrição disponível"}
+                  image={recipe.image_url || "/placeholder.svg?height=192&width=384"}
+                  time={formatTime(recipe.prep_time_minutes)}
+                  difficulty={getDifficulty(recipe.prep_time_minutes)}
+                  calories={recipe.calories}
+                  ingredients={recipe.ingredients?.map(ing => ing.name) || []}
+                  onClick={() => handleRecipeClick(recipe.id)} 
+                />
               ))}
             </div>
 
-            {displayedRecipes < recipes.length && (
+            {/* Load More Button */}
+            {hasMoreRecipes && (
               <div className="flex justify-center mt-8">
-                <Button variant="outline" size="lg" onClick={loadMoreRecipes} disabled={isLoading}>
-                  {isLoading ? "Carregando..." : "Carregar Mais Receitas"}
+                <Button 
+                  variant="outline" 
+                  size="lg" 
+                  onClick={loadMoreRecipes} 
+                  disabled={isLoading}
+                  className="min-w-[200px]"
+                >
+                  {isLoading ? "Carregando..." : `Carregar Mais (${total - skip} restantes)`}
                 </Button>
               </div>
             )}
-          </TabsContent>
 
-          {/* Outros conteúdos de abas aqui */}
-          <TabsContent value="populares" className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Receita 6 */}
-              <ExploreRecipeCard
-                id="6"
-                title="Bolo de Cenoura"
-                description="Um bolo fofinho de cenoura com cobertura de chocolate."
-                image="/placeholder.svg?height=192&width=384"
-                time="50 min"
-                difficulty="Médio"
-                rating={4.9}
-                reviews={203}
-                onClick={() => handleRecipeClick("6")}
-              />
-
-              {/* Receita 1 */}
-              <ExploreRecipeCard
-                id="1"
-                title="Arroz de Frango"
-                description="Um prato completo de arroz com frango e legumes."
-                image="/placeholder.svg?height=192&width=384"
-                time="40 min"
-                difficulty="Médio"
-                rating={4.8}
-                reviews={124}
-                onClick={() => handleRecipeClick("1")}
-              />
-
-              {/* Receita 9 */}
-              <ExploreRecipeCard
-                id="9"
-                title="Frango Assado com Batatas"
-                description="Frango assado suculento com batatas douradas."
-                image="/placeholder.svg?height=192&width=384"
-                time="60 min"
-                difficulty="Médio"
-                rating={4.8}
-                reviews={167}
-                onClick={() => handleRecipeClick("9")}
-              />
-            </div>
-          </TabsContent>
-        </Tabs>
+            {/* No More Results */}
+            {!hasMoreRecipes && recipes.length > 0 && (
+              <div className="text-center text-muted-foreground text-sm py-8">
+                Todas as receitas foram carregadas
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   )
@@ -393,8 +306,8 @@ interface ExploreRecipeCardProps {
   image: string
   time: string
   difficulty: string
-  rating: number
-  reviews: number
+  calories?: number
+  ingredients?: string[]
   onClick?: () => void
 }
 
@@ -405,8 +318,8 @@ function ExploreRecipeCard({
   image,
   time,
   difficulty,
-  rating,
-  reviews,
+  calories,
+  ingredients,
   onClick,
 }: ExploreRecipeCardProps) {
   const [favorite, setFavorite] = useState(false)
@@ -444,21 +357,31 @@ function ExploreRecipeCard({
               <ChefHat className="h-4 w-4 text-muted-foreground" />
               <span>{difficulty}</span>
             </div>
+            {calories && (
+              <div className="flex items-center gap-1 text-sm">
+                <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded">
+                  {calories} cal
+                </span>
+              </div>
+            )}
           </div>
-          <div className="flex items-center gap-2 mt-1">
-            <div className="flex items-center">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <Star
-                  key={star}
-                  className={`h-4 w-4 ${
-                    star <= Math.floor(rating) ? "text-amber-400 fill-amber-400" : "text-gray-300"
-                  }`}
-                />
+          {ingredients && ingredients.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {ingredients.slice(0, 3).map((ingredient, index) => (
+                <span 
+                  key={index}
+                  className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded"
+                >
+                  {ingredient}
+                </span>
               ))}
+              {ingredients.length > 3 && (
+                <span className="text-xs text-muted-foreground">
+                  +{ingredients.length - 3} mais
+                </span>
+              )}
             </div>
-            <span className="text-sm font-medium">{rating}</span>
-            <span className="text-xs text-muted-foreground">({reviews})</span>
-          </div>
+          )}
         </div>
       </CardContent>
       <CardFooter className="p-4 pt-0">

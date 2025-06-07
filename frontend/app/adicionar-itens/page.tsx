@@ -20,7 +20,6 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { pantryAPI } from "@/lib/api/pantry"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
-import { pantryAPI, PantryItemCreate } from "@/lib/api/pantry"
 
 type CategoryType = 'vegetais' | 'frutas' | 'proteinas' | 'graos' | 'laticinios' | 'temperos' | 'outros'
 

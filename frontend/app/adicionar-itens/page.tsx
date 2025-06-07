@@ -20,6 +20,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { pantryAPI } from "@/lib/api/pantry"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
+import { pantryAPI, PantryItemCreate } from "@/lib/api/pantry"
 
 type CategoryType = 'vegetais' | 'frutas' | 'proteinas' | 'graos' | 'laticinios' | 'temperos' | 'outros'
 
@@ -104,8 +105,11 @@ export default function AdicionarItens() {
       // Reload recent ingredients
       loadRecentIngredients()
     } catch (error) {
-      console.error('Failed to add ingredient:', error)
-      toast.error("Erro ao adicionar ingrediente")
+      const errorMessage = error instanceof Error ? error.message : "Erro ao adicionar ingrediente"
+      toast.error("Erro ao adicionar ingrediente", {
+        description: errorMessage
+      })
+      console.error("Error adding pantry item:", error)
     } finally {
       setIsLoading(false)
     }
@@ -397,7 +401,9 @@ export default function AdicionarItens() {
                           <span>
                             {ingredient.item_name} ({ingredient.quantity} {ingredient.unit})
                           </span>
-                          <Badge variant="outline">Recente</Badge>
+                          <Badge variant="outline" className="text-xs">
+                            {new Date(ingredient.added_at).toLocaleDateString('pt-BR')}
+                          </Badge>
                         </div>
                       ))}
                     </div>

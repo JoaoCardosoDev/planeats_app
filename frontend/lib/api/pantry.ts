@@ -1,4 +1,5 @@
 // API service for pantry-related operations
+import { getSession } from 'next-auth/react';
 
 // Use localhost for browser requests (Docker internal URLs don't work from browser)
 const API_BASE_URL = typeof window !== 'undefined' 
@@ -44,11 +45,16 @@ export interface PantryListResponse {
 
 class PantryAPI {
   private async getAuthHeaders(): Promise<HeadersInit> {
-    // TODO: Integrate with NextAuth.js to get the JWT token
-    // For now, return empty headers - this will be implemented when integrating auth
-    return {
+    const session = await getSession();
+    const headers: HeadersInit = {
       'Content-Type': 'application/json',
     };
+    
+    if (session && (session as any).accessToken) {
+      (headers as any).Authorization = `Bearer ${(session as any).accessToken}`;
+    }
+    
+    return headers;
   }
 
   async createPantryItem(item: PantryItemCreate): Promise<PantryItemRead> {

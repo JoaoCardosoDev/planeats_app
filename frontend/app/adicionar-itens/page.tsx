@@ -17,7 +17,7 @@ import { useState, useEffect } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { useAppStore } from "@/lib/store"
+import { pantryAPI } from "@/lib/api/pantry"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 
@@ -44,12 +44,27 @@ const commonIngredients = [
 export default function AdicionarItens() {
   const [name, setName] = useState("")
   const [category, setCategory] = useState<CategoryType | "">("")
-  const [quantity, setQuantity] = useState("")
+  const [quantityValue, setQuantityValue] = useState("")
+  const [unit, setUnit] = useState("unidades")
   const [date, setDate] = useState<Date>()
   const [isLoading, setIsLoading] = useState(false)
+  const [recentIngredients, setRecentIngredients] = useState<any[]>([])
 
-  const { addIngredient, ingredients } = useAppStore()
   const router = useRouter()
+
+  // Load recent ingredients on mount
+  useEffect(() => {
+    loadRecentIngredients()
+  }, [])
+
+  const loadRecentIngredients = async () => {
+    try {
+      const items = await pantryAPI.getPantryItems(0, 5)
+      setRecentIngredients(items.reverse()) // Show most recent first
+    } catch (error) {
+      console.error('Failed to load recent ingredients:', error)
+    }
+  }
 
   // Wrapper para setCategory que aceita string
   const handleCategoryChange = (value: string) => {
@@ -58,7 +73,7 @@ export default function AdicionarItens() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name || !category || !quantity) {
+    if (!name || !category || !quantityValue) {
       toast.error("Por favor, preencha todos os campos obrigatórios")
       return
     }
@@ -66,11 +81,15 @@ export default function AdicionarItens() {
     setIsLoading(true)
 
     try {
-      addIngredient({
-        name,
-        category: category as CategoryType,
-        quantity,
-        expiryDate: date?.toISOString(),
+      // Parse quantity as number, extract unit if present
+      const quantityNum = parseFloat(quantityValue) || 1
+      
+      await pantryAPI.createPantryItem({
+        item_name: name,
+        quantity: quantityNum,
+        unit: unit,
+        expiration_date: date ? date.toISOString().split('T')[0] : undefined, // Format as YYYY-MM-DD
+        purchase_date: new Date().toISOString().split('T')[0], // Today's date
       })
 
       toast.success("Ingrediente adicionado com sucesso!")
@@ -78,9 +97,14 @@ export default function AdicionarItens() {
       // Reset form
       setName("")
       setCategory("")
-      setQuantity("")
+      setQuantityValue("")
+      setUnit("unidades")
       setDate(undefined)
+
+      // Reload recent ingredients
+      loadRecentIngredients()
     } catch (error) {
+      console.error('Failed to add ingredient:', error)
       toast.error("Erro ao adicionar ingrediente")
     } finally {
       setIsLoading(false)
@@ -91,8 +115,6 @@ export default function AdicionarItens() {
     setName(ingredient.name)
     setCategory(ingredient.category as CategoryType)
   }
-
-  const recentIngredients = ingredients.slice(-5).reverse()
 
   // 100 dicas sobre organização de frigorífico e culinária
   const [currentTip, setCurrentTip] = useState(0)
@@ -266,13 +288,33 @@ export default function AdicionarItens() {
 
                     <div className="space-y-2">
                       <Label htmlFor="quantidade">Quantidade *</Label>
-                      <Input
-                        id="quantidade"
-                        placeholder="Ex: 500g, 2 unidades, 1L..."
-                        value={quantity}
-                        onChange={(e) => setQuantity(e.target.value)}
-                        required
-                      />
+                      <div className="flex gap-2">
+                        <Input
+                          id="quantidade"
+                          placeholder="Ex: 500, 2, 1..."
+                          value={quantityValue}
+                          onChange={(e) => setQuantityValue(e.target.value)}
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          required
+                          className="flex-1"
+                        />
+                        <Select value={unit} onValueChange={setUnit}>
+                          <SelectTrigger className="w-32">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="unidades">unidades</SelectItem>
+                            <SelectItem value="kg">kg</SelectItem>
+                            <SelectItem value="g">g</SelectItem>
+                            <SelectItem value="L">L</SelectItem>
+                            <SelectItem value="mL">mL</SelectItem>
+                            <SelectItem value="pacotes">pacotes</SelectItem>
+                            <SelectItem value="latas">latas</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                   </div>
 
@@ -353,9 +395,9 @@ export default function AdicionarItens() {
                           className="flex justify-between items-center p-2 rounded-md hover:bg-muted/50"
                         >
                           <span>
-                            {ingredient.name} ({ingredient.quantity})
+                            {ingredient.item_name} ({ingredient.quantity} {ingredient.unit})
                           </span>
-                          <Badge variant="outline">{ingredient.category}</Badge>
+                          <Badge variant="outline">Recente</Badge>
                         </div>
                       ))}
                     </div>

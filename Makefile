@@ -6,7 +6,7 @@ PIP = pip3
 DOCKER_COMPOSE = docker-compose
 
 # Phony targets (targets that are not actual files)
-.PHONY: all build up down logs ps lint test clean help init-alembic frontend-restart frontend-logs backend-restart backend-logs restart-all frontend-shell backend-shell
+.PHONY: all build up down logs ps lint test clean help init-alembic frontend-restart frontend-logs backend-restart backend-logs restart-all frontend-shell backend-shell rebuild
 
 # Default target
 all: help
@@ -70,6 +70,13 @@ restart-all:
 	@echo "Restarting all services..."
 	$(DOCKER_COMPOSE) restart
 
+rebuild:
+	@echo "Rebuilding containers (down -> build -> up)..."
+	$(DOCKER_COMPOSE) down
+	$(DOCKER_COMPOSE) build
+	$(DOCKER_COMPOSE) up -d
+	@echo "All containers rebuilt and started!"
+
 frontend-shell:
 	@echo "Opening shell in frontend container..."
 	$(DOCKER_COMPOSE) exec frontend sh
@@ -92,6 +99,7 @@ help:
 	@echo "  make build             - Build Docker images"
 	@echo "  make up                - Start services using docker-compose"
 	@echo "  make down              - Stop services using docker-compose"
+	@echo "  make rebuild           - Down, rebuild, and start all containers"
 	@echo "  make logs              - View logs from all services"
 	@echo "  make ps                - List running services"
 	@echo "  make lint              - Run linters"
@@ -105,6 +113,7 @@ help:
 	@echo "  make backend-restart   - Restart backend container"
 	@echo "  make backend-logs      - Show backend container logs"
 	@echo "  make restart-all       - Restart all containers"
+	@echo "  make rebuild           - Down, rebuild, and start all containers"
 	@echo "  make frontend-shell    - Open shell in frontend container"
 	@echo "  make backend-shell     - Open shell in backend container"
 	@echo ""

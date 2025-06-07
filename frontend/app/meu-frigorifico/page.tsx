@@ -8,11 +8,11 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Link from "next/link"
-import { PlusCircle, Search, Edit, Trash2 } from "lucide-react"
+import { PlusCircle, Search, Edit, Trash2, Loader2 } from "lucide-react"
 import Image from "next/image"
-import { useAppStore } from "@/lib/store"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { toast } from "sonner"
+import { pantryAPI, type PantryItemRead } from "@/lib/api/pantry"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,42 +36,93 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 export default function MeuFrigorifico() {
-  const { ingredients, deleteIngredient, updateIngredient, getIngredientsByCategory } = useAppStore()
+  const [pantryItems, setPantryItems] = useState<PantryItemRead[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [activeTab, setActiveTab] = useState("todos")
-  const [editingIngredient, setEditingIngredient] = useState<any>(null)
+  const [editingIngredient, setEditingIngredient] = useState<PantryItemRead | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-  const [ingredientToDelete, setIngredientToDelete] = useState<{ id: string; name: string } | null>(null)
 
-  // Filtrar ingredientes por categoria e busca
-  const filteredIngredients = getIngredientsByCategory(activeTab).filter((ingredient) =>
-    ingredient.name.toLowerCase().includes(searchQuery.toLowerCase()),
-  )
+  // Load pantry items from API
+  useEffect(() => {
+    loadPantryItems()
+  }, [])
 
-  const handleDelete = (id: string, name: string) => {
-    deleteIngredient(id)
-    toast.success(`${name} removido do frigorífico`)
-    setIngredientToDelete(null)
+  const loadPantryItems = async () => {
+    try {
+      setLoading(true)
+      const items = await pantryAPI.getPantryItems()
+      setPantryItems(items)
+    } catch (error) {
+      console.error('Failed to load pantry items:', error)
+      toast.error('Erro ao carregar itens da despensa')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const handleEdit = (ingredient: any) => {
-    setEditingIngredient({ ...ingredient })
+  // Get category from item name (simple categorization for now)
+  const getItemCategory = (itemName: string): string => {
+    const name = itemName.toLowerCase()
+    if (name.includes('tomate') || name.includes('cebola') || name.includes('alface') || name.includes('cenoura')) return 'vegetais'
+    if (name.includes('frango') || name.includes('carne') || name.includes('peixe') || name.includes('ovo')) return 'proteinas'
+    if (name.includes('arroz') || name.includes('feijão') || name.includes('macarrão')) return 'graos'
+    if (name.includes('leite') || name.includes('queijo') || name.includes('iogurte')) return 'laticinios'
+    if (name.includes('sal') || name.includes('pimenta') || name.includes('alho')) return 'temperos'
+    if (name.includes('maçã') || name.includes('banana') || name.includes('laranja')) return 'frutas'
+    return 'outros'
+  }
+
+  // Filter items by category and search
+  const getItemsByCategory = (category: string) => {
+    if (category === 'todos') return pantryItems
+    return pantryItems.filter(item => getItemCategory(item.item_name) === category)
+  }
+
+  const filteredIngredients = getItemsByCategory(activeTab).filter((item) =>
+    item.item_name.toLowerCase().includes(searchQuery.toLowerCase()),
+  )
+
+  const handleDelete = async (id: number, name: string) => {
+    try {
+      await pantryAPI.deletePantryItem(id)
+      setPantryItems(items => items.filter(item => item.id !== id))
+      toast.success(`${name} removido do frigorífico`)
+    } catch (error) {
+      console.error('Failed to delete item:', error)
+      toast.error('Erro ao remover item')
+    }
+  }
+
+  const handleEdit = (item: PantryItemRead) => {
+    setEditingIngredient({ ...item })
     setIsEditDialogOpen(true)
   }
 
-  const handleUpdateIngredient = (e: React.FormEvent) => {
+  const handleUpdateIngredient = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (editingIngredient) {
-      updateIngredient(editingIngredient.id, {
-        name: editingIngredient.name,
+    if (!editingIngredient) return
+
+    try {
+      const updatedItem = await pantryAPI.updatePantryItem(editingIngredient.id, {
+        item_name: editingIngredient.item_name,
         quantity: editingIngredient.quantity,
-        category: editingIngredient.category,
-        expiryDate: editingIngredient.expiryDate,
+        unit: editingIngredient.unit,
+        expiration_date: editingIngredient.expiration_date,
+        purchase_date: editingIngredient.purchase_date,
+        calories_per_unit: editingIngredient.calories_per_unit,
       })
+      
+      setPantryItems(items => 
+        items.map(item => item.id === updatedItem.id ? updatedItem : item)
+      )
+      
       toast.success("Ingrediente atualizado com sucesso!")
       setIsEditDialogOpen(false)
       setEditingIngredient(null)
+    } catch (error) {
+      console.error('Failed to update item:', error)
+      toast.error('Erro ao atualizar ingrediente')
     }
   }
 
@@ -89,7 +140,18 @@ export default function MeuFrigorifico() {
   }
 
   const getCategoryCount = (category: string) => {
-    return getIngredientsByCategory(category).length
+    return getItemsByCategory(category).length
+  }
+
+  if (loading) {
+    return (
+      <div className="container py-8">
+        <div className="flex flex-col items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+          <p className="mt-2 text-muted-foreground">Carregando ingredientes...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -125,7 +187,7 @@ export default function MeuFrigorifico() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="mb-4 bg-green-50 border border-green-200">
-            <TabsTrigger value="todos" className="data-[state=active]:bg-green-600 data-[state=active]:text-white">Todos ({ingredients.length})</TabsTrigger>
+            <TabsTrigger value="todos" className="data-[state=active]:bg-green-600 data-[state=active]:text-white">Todos ({pantryItems.length})</TabsTrigger>
             <TabsTrigger value="vegetais" className="data-[state=active]:bg-green-600 data-[state=active]:text-white">Vegetais ({getCategoryCount("vegetais")})</TabsTrigger>
             <TabsTrigger value="proteinas" className="data-[state=active]:bg-green-600 data-[state=active]:text-white">Proteínas ({getCategoryCount("proteinas")})</TabsTrigger>
             <TabsTrigger value="graos" className="data-[state=active]:bg-green-600 data-[state=active]:text-white">Grãos ({getCategoryCount("graos")})</TabsTrigger>
@@ -159,8 +221,8 @@ export default function MeuFrigorifico() {
                       <div className="flex items-center">
                         <div className="relative h-24 w-24 shrink-0">
                           <Image
-                            src={`/images/ingredients/${ingredient.name.toLowerCase()}.jpg`}
-                            alt={ingredient.name}
+                            src={`/images/ingredients/${ingredient.item_name.toLowerCase()}.jpg`}
+                            alt={ingredient.item_name}
                             fill
                             className="object-cover"
                             onError={(e) => {
@@ -171,14 +233,14 @@ export default function MeuFrigorifico() {
                         <div className="flex-1 p-4">
                           <div className="flex justify-between items-start">
                             <div>
-                              <h3 className="font-medium">{ingredient.name}</h3>
-                              <p className="text-sm text-muted-foreground">{ingredient.quantity}</p>
+                              <h3 className="font-medium">{ingredient.item_name}</h3>
+                              <p className="text-sm text-muted-foreground">{ingredient.quantity} {ingredient.unit}</p>
                               <Badge variant="outline" className="mt-1">
-                                {getCategoryLabel(ingredient.category)}
+                                {getCategoryLabel(getItemCategory(ingredient.item_name))}
                               </Badge>
-                              {ingredient.expiryDate && (
+                              {ingredient.expiration_date && (
                                 <p className="text-xs text-muted-foreground mt-1">
-                                  Vence: {new Date(ingredient.expiryDate).toLocaleDateString("pt-BR")}
+                                  Vence: {new Date(ingredient.expiration_date).toLocaleDateString("pt-BR")}
                                 </p>
                               )}
                             </div>
@@ -197,14 +259,14 @@ export default function MeuFrigorifico() {
                                   <AlertDialogHeader>
                                     <AlertDialogTitle>Remover ingrediente</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                      Tem certeza que deseja remover "{ingredient.name}" do seu frigorífico? Esta ação
+                                      Tem certeza que deseja remover "{ingredient.item_name}" do seu frigorífico? Esta ação
                                       não pode ser desfeita.
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>
                                     <AlertDialogCancel>Cancelar</AlertDialogCancel>
                                     <AlertDialogAction
-                                      onClick={() => handleDelete(ingredient.id, ingredient.name)}
+                                      onClick={() => handleDelete(ingredient.id, ingredient.item_name)}
                                       className="bg-red-600 hover:bg-red-700"
                                     >
                                       Remover
@@ -238,11 +300,11 @@ export default function MeuFrigorifico() {
                     <Label htmlFor="edit-name">Nome</Label>
                     <Input
                       id="edit-name"
-                      value={editingIngredient.name}
+                      value={editingIngredient.item_name}
                       onChange={(e) =>
                         setEditingIngredient({
                           ...editingIngredient,
-                          name: e.target.value,
+                          item_name: e.target.value,
                         })
                       }
                     />
@@ -251,50 +313,39 @@ export default function MeuFrigorifico() {
                     <Label htmlFor="edit-quantity">Quantidade</Label>
                     <Input
                       id="edit-quantity"
+                      type="number"
                       value={editingIngredient.quantity}
                       onChange={(e) =>
                         setEditingIngredient({
                           ...editingIngredient,
-                          quantity: e.target.value,
+                          quantity: parseFloat(e.target.value) || 0,
                         })
                       }
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="edit-category">Categoria</Label>
-                    <Select
-                      value={editingIngredient.category}
-                      onValueChange={(value) =>
+                    <Label htmlFor="edit-unit">Unidade</Label>
+                    <Input
+                      id="edit-unit"
+                      value={editingIngredient.unit}
+                      onChange={(e) =>
                         setEditingIngredient({
                           ...editingIngredient,
-                          category: value,
+                          unit: e.target.value,
                         })
                       }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="vegetais">Vegetais</SelectItem>
-                        <SelectItem value="frutas">Frutas</SelectItem>
-                        <SelectItem value="proteinas">Proteínas</SelectItem>
-                        <SelectItem value="graos">Grãos</SelectItem>
-                        <SelectItem value="laticinios">Laticínios</SelectItem>
-                        <SelectItem value="temperos">Temperos</SelectItem>
-                        <SelectItem value="outros">Outros</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="edit-expiry">Data de Validade</Label>
                     <Input
                       id="edit-expiry"
                       type="date"
-                      value={editingIngredient.expiryDate ? editingIngredient.expiryDate.split("T")[0] : ""}
+                      value={editingIngredient.expiration_date ? editingIngredient.expiration_date.split("T")[0] : ""}
                       onChange={(e) =>
                         setEditingIngredient({
                           ...editingIngredient,
-                          expiryDate: e.target.value ? new Date(e.target.value).toISOString() : undefined,
+                          expiration_date: e.target.value || undefined,
                         })
                       }
                     />

@@ -43,6 +43,12 @@ export interface PantryListResponse {
   limit: number;
 }
 
+export interface PantryFilters {
+  expiring_soon?: boolean;
+  sort_by?: 'item_name' | 'expiration_date' | 'added_at' | 'quantity';
+  sort_order?: 'asc' | 'desc';
+}
+
 class PantryAPI {
   private async getAuthHeaders(): Promise<HeadersInit> {
     const session = await getSession();
@@ -80,11 +86,26 @@ class PantryAPI {
     return data;
   }
 
-  async getPantryItems(skip: number = 0, limit: number = 100): Promise<PantryItemRead[]> {
+  async getPantryItems(
+    skip: number = 0, 
+    limit: number = 100, 
+    filters?: PantryFilters
+  ): Promise<PantryItemRead[]> {
     const params = new URLSearchParams({
       skip: skip.toString(),
       limit: limit.toString(),
     });
+
+    // Add filter parameters if provided
+    if (filters?.expiring_soon !== undefined) {
+      params.append('expiring_soon', filters.expiring_soon.toString());
+    }
+    if (filters?.sort_by) {
+      params.append('sort_by', filters.sort_by);
+    }
+    if (filters?.sort_order) {
+      params.append('sort_order', filters.sort_order);
+    }
 
     const url = `${API_BASE_URL}/api/v1/pantry/items?${params.toString()}`;
     

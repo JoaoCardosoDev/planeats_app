@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
-from typing import List
+from typing import List, Optional
 
 from app.api.v1.deps import get_current_user, get_db
 from app.models.pantry_models import PantryItemCreate, PantryItemRead, PantryItemUpdate
@@ -32,16 +32,26 @@ def read_pantry_items(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     skip: int = 0,
-    limit: int = 100
+    limit: int = 100,
+    expiring_soon: Optional[bool] = None,
+    sort_by: Optional[str] = None,
+    sort_order: Optional[str] = "asc"
 ):
     """
-    Retrieve pantry items for current user
+    Retrieve pantry items for current user with optional filtering and sorting
+    
+    - **expiring_soon**: Filter items expiring in the next 7 days
+    - **sort_by**: Sort by field (item_name, expiration_date, added_at, quantity)  
+    - **sort_order**: Sort order (asc, desc)
     """
     return crud_pantry.get_multi_by_user(
         db=db, 
         user_id=current_user.id,
         skip=skip,
-        limit=limit
+        limit=limit,
+        expiring_soon=expiring_soon,
+        sort_by=sort_by,
+        sort_order=sort_order
     )
 
 

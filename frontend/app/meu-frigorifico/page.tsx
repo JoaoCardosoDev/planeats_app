@@ -12,7 +12,8 @@ import { PlusCircle, Search, Edit, Trash2, Loader2 } from "lucide-react"
 import Image from "next/image"
 import { useState, useEffect } from "react"
 import { toast } from "sonner"
-import { pantryAPI, type PantryItemRead } from "@/lib/api/pantry"
+import { pantryAPI, type PantryItemRead, type PantryFilters as PantryFiltersType } from "@/lib/api/pantry"
+import { PantryFilters } from "@/components/pantry/PantryFilters"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,7 +34,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 export default function MeuFrigorifico() {
   const [pantryItems, setPantryItems] = useState<PantryItemRead[]>([])
@@ -42,16 +42,17 @@ export default function MeuFrigorifico() {
   const [activeTab, setActiveTab] = useState("todos")
   const [editingIngredient, setEditingIngredient] = useState<PantryItemRead | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [filters, setFilters] = useState<PantryFiltersType>({})
 
   // Load pantry items from API
   useEffect(() => {
     loadPantryItems()
-  }, [])
+  }, [filters]) // Reload when filters change
 
   const loadPantryItems = async () => {
     try {
       setLoading(true)
-      const items = await pantryAPI.getPantryItems()
+      const items = await pantryAPI.getPantryItems(0, 100, filters)
       setPantryItems(items)
     } catch (error) {
       console.error('Failed to load pantry items:', error)
@@ -143,6 +144,15 @@ export default function MeuFrigorifico() {
     return getItemsByCategory(category).length
   }
 
+  // Check if item is expiring soon (within 7 days)
+  const isExpiringSoon = (item: PantryItemRead): boolean => {
+    if (!item.expiration_date) return false
+    const expirationDate = new Date(item.expiration_date)
+    const today = new Date()
+    const daysUntilExpiry = Math.ceil((expirationDate.getTime() - today.getTime()) / (1000 * 3600 * 24))
+    return daysUntilExpiry <= 7 && daysUntilExpiry >= 0
+  }
+
   if (loading) {
     return (
       <div className="container py-8">
@@ -185,106 +195,127 @@ export default function MeuFrigorifico() {
           </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="mb-4 bg-green-50 border border-green-200">
-            <TabsTrigger value="todos" className="data-[state=active]:bg-green-600 data-[state=active]:text-white">Todos ({pantryItems.length})</TabsTrigger>
-            <TabsTrigger value="vegetais" className="data-[state=active]:bg-green-600 data-[state=active]:text-white">Vegetais ({getCategoryCount("vegetais")})</TabsTrigger>
-            <TabsTrigger value="proteinas" className="data-[state=active]:bg-green-600 data-[state=active]:text-white">Proteínas ({getCategoryCount("proteinas")})</TabsTrigger>
-            <TabsTrigger value="graos" className="data-[state=active]:bg-green-600 data-[state=active]:text-white">Grãos ({getCategoryCount("graos")})</TabsTrigger>
-            <TabsTrigger value="laticinios">Laticínios ({getCategoryCount("laticinios")})</TabsTrigger>
-            <TabsTrigger value="temperos">Temperos ({getCategoryCount("temperos")})</TabsTrigger>
-            <TabsTrigger value="frutas">Frutas ({getCategoryCount("frutas")})</TabsTrigger>
-          </TabsList>
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Filters Panel */}
+          <div className="lg:col-span-1">
+            <PantryFilters 
+              filters={filters} 
+              onFiltersChange={setFilters}
+              itemCount={pantryItems.length}
+            />
+          </div>
 
-          <TabsContent value={activeTab} className="space-y-4">
-            {filteredIngredients.length === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <p className="text-muted-foreground mb-4">
-                    {searchQuery
-                      ? `Nenhum ingrediente encontrado com "${searchQuery}"`
-                      : "Nenhum ingrediente cadastrado nesta categoria"}
-                  </p>
-                  <Button asChild className="bg-green-600 hover:bg-green-700">
-                    <Link href="/adicionar-itens">
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      Adicionar Primeiro Ingrediente
-                    </Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredIngredients.map((ingredient) => (
-                  <Card key={ingredient.id} className="overflow-hidden">
-                    <CardContent className="p-0">
-                      <div className="flex items-center">
-                        <div className="relative h-24 w-24 shrink-0">
-                          <Image
-                            src={`/images/ingredients/${ingredient.item_name.toLowerCase()}.jpg`}
-                            alt={ingredient.item_name}
-                            fill
-                            className="object-cover"
-                            onError={(e) => {
-                              e.currentTarget.src = "/placeholder.svg?height=96&width=96"
-                            }}
-                          />
-                        </div>
-                        <div className="flex-1 p-4">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h3 className="font-medium">{ingredient.item_name}</h3>
-                              <p className="text-sm text-muted-foreground">{ingredient.quantity} {ingredient.unit}</p>
-                              <Badge variant="outline" className="mt-1">
-                                {getCategoryLabel(getItemCategory(ingredient.item_name))}
-                              </Badge>
-                              {ingredient.expiration_date && (
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  Vence: {new Date(ingredient.expiration_date).toLocaleDateString("pt-BR")}
-                                </p>
-                              )}
-                            </div>
-                            <div className="flex gap-1">
-                              <Button variant="ghost" size="icon" onClick={() => handleEdit(ingredient)}>
-                                <Edit className="h-4 w-4" />
-                              </Button>
+          {/* Main Content */}
+          <div className="lg:col-span-3">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="mb-4 bg-green-50 border border-green-200">
+                <TabsTrigger value="todos" className="data-[state=active]:bg-green-600 data-[state=active]:text-white">Todos ({pantryItems.length})</TabsTrigger>
+                <TabsTrigger value="vegetais" className="data-[state=active]:bg-green-600 data-[state=active]:text-white">Vegetais ({getCategoryCount("vegetais")})</TabsTrigger>
+                <TabsTrigger value="proteinas" className="data-[state=active]:bg-green-600 data-[state=active]:text-white">Proteínas ({getCategoryCount("proteinas")})</TabsTrigger>
+                <TabsTrigger value="graos" className="data-[state=active]:bg-green-600 data-[state=active]:text-white">Grãos ({getCategoryCount("graos")})</TabsTrigger>
+                <TabsTrigger value="laticinios">Laticínios ({getCategoryCount("laticinios")})</TabsTrigger>
+                <TabsTrigger value="temperos">Temperos ({getCategoryCount("temperos")})</TabsTrigger>
+                <TabsTrigger value="frutas">Frutas ({getCategoryCount("frutas")})</TabsTrigger>
+              </TabsList>
 
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button variant="ghost" size="icon">
-                                    <Trash2 className="h-4 w-4 text-red-500" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Remover ingrediente</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Tem certeza que deseja remover "{ingredient.item_name}" do seu frigorífico? Esta ação
-                                      não pode ser desfeita.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={() => handleDelete(ingredient.id, ingredient.item_name)}
-                                      className="bg-red-600 hover:bg-red-700"
-                                    >
-                                      Remover
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+              <TabsContent value={activeTab} className="space-y-4">
+                {filteredIngredients.length === 0 ? (
+                  <Card>
+                    <CardContent className="flex flex-col items-center justify-center py-12">
+                      <p className="text-muted-foreground mb-4">
+                        {searchQuery
+                          ? `Nenhum ingrediente encontrado com "${searchQuery}"`
+                          : "Nenhum ingrediente cadastrado nesta categoria"}
+                      </p>
+                      <Button asChild className="bg-green-600 hover:bg-green-700">
+                        <Link href="/adicionar-itens">
+                          <PlusCircle className="mr-2 h-4 w-4" />
+                          Adicionar Primeiro Ingrediente
+                        </Link>
+                      </Button>
                     </CardContent>
                   </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {filteredIngredients.map((ingredient) => (
+                      <Card key={ingredient.id} className="overflow-hidden">
+                        <CardContent className="p-0">
+                          <div className="flex items-center">
+                            <div className="relative h-24 w-24 shrink-0">
+                              <Image
+                                src={`/images/ingredients/${ingredient.item_name.toLowerCase()}.jpg`}
+                                alt={ingredient.item_name}
+                                fill
+                                className="object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.src = "/placeholder.svg?height=96&width=96"
+                                }}
+                              />
+                            </div>
+                            <div className="flex-1 p-4">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <h3 className="font-medium">{ingredient.item_name}</h3>
+                                  <p className="text-sm text-muted-foreground">{ingredient.quantity} {ingredient.unit}</p>
+                                  <div className="flex gap-1 mt-1">
+                                    <Badge variant="outline">
+                                      {getCategoryLabel(getItemCategory(ingredient.item_name))}
+                                    </Badge>
+                                    {isExpiringSoon(ingredient) && (
+                                      <Badge variant="destructive" className="text-xs">
+                                        Expira em breve
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  {ingredient.expiration_date && (
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      Vence: {new Date(ingredient.expiration_date).toLocaleDateString("pt-BR")}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="flex gap-1">
+                                  <Button variant="ghost" size="icon" onClick={() => handleEdit(ingredient)}>
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button variant="ghost" size="icon">
+                                        <Trash2 className="h-4 w-4 text-red-500" />
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>Remover ingrediente</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          Tem certeza que deseja remover "{ingredient.item_name}" do seu frigorífico? Esta ação
+                                          não pode ser desfeita.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                        <AlertDialogAction
+                                          onClick={() => handleDelete(ingredient.id, ingredient.item_name)}
+                                          className="bg-red-600 hover:bg-red-700"
+                                        >
+                                          Remover
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+          </div>
+        </div>
 
         {/* Dialog de Edição */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>

@@ -17,9 +17,9 @@ import { useState, useEffect } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { useAppStore } from "@/lib/store"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
+import { pantryAPI, PantryItemCreate } from "@/lib/api/pantry"
 
 type CategoryType = 'vegetais' | 'frutas' | 'proteinas' | 'graos' | 'laticinios' | 'temperos' | 'outros'
 
@@ -47,8 +47,8 @@ export default function AdicionarItens() {
   const [quantity, setQuantity] = useState("")
   const [date, setDate] = useState<Date>()
   const [isLoading, setIsLoading] = useState(false)
+  const [recentIngredients, setRecentIngredients] = useState<any[]>([])
 
-  const { addIngredient, ingredients } = useAppStore()
   const router = useRouter()
 
   // Wrapper para setCategory que aceita string
@@ -66,12 +66,23 @@ export default function AdicionarItens() {
     setIsLoading(true)
 
     try {
-      addIngredient({
-        name,
-        category: category as CategoryType,
-        quantity,
-        expiryDate: date?.toISOString(),
-      })
+      // Parse quantity to extract number and unit
+      const quantityMatch = quantity.match(/^(\d+(?:\.\d+)?)\s*(.*)$/)
+      const quantityValue = quantityMatch ? parseFloat(quantityMatch[1]) : 1
+      const unit = quantityMatch ? quantityMatch[2] || "unidade" : "unidade"
+
+      const pantryItem: PantryItemCreate = {
+        item_name: name,
+        quantity: quantityValue,
+        unit: unit,
+        expiration_date: date ? date.toISOString().split('T')[0] : undefined, // Format as YYYY-MM-DD
+        purchase_date: new Date().toISOString().split('T')[0], // Today's date
+      }
+
+      const newItem = await pantryAPI.createPantryItem(pantryItem)
+      
+      // Add to recent ingredients for display
+      setRecentIngredients(prev => [newItem, ...prev.slice(0, 4)])
 
       toast.success("Ingrediente adicionado com sucesso!")
 
@@ -81,7 +92,11 @@ export default function AdicionarItens() {
       setQuantity("")
       setDate(undefined)
     } catch (error) {
-      toast.error("Erro ao adicionar ingrediente")
+      const errorMessage = error instanceof Error ? error.message : "Erro ao adicionar ingrediente"
+      toast.error("Erro ao adicionar ingrediente", {
+        description: errorMessage
+      })
+      console.error("Error adding pantry item:", error)
     } finally {
       setIsLoading(false)
     }
@@ -91,8 +106,6 @@ export default function AdicionarItens() {
     setName(ingredient.name)
     setCategory(ingredient.category as CategoryType)
   }
-
-  const recentIngredients = ingredients.slice(-5).reverse()
 
   // 100 dicas sobre organização de frigorífico e culinária
   const [currentTip, setCurrentTip] = useState(0)
@@ -353,9 +366,11 @@ export default function AdicionarItens() {
                           className="flex justify-between items-center p-2 rounded-md hover:bg-muted/50"
                         >
                           <span>
-                            {ingredient.name} ({ingredient.quantity})
+                            {ingredient.item_name} ({ingredient.quantity} {ingredient.unit})
                           </span>
-                          <Badge variant="outline">{ingredient.category}</Badge>
+                          <Badge variant="outline" className="text-xs">
+                            {new Date(ingredient.added_at).toLocaleDateString('pt-BR')}
+                          </Badge>
                         </div>
                       ))}
                     </div>

@@ -72,6 +72,9 @@ export interface GetRecommendationsParams {
   max_preparation_time?: number
   max_calories?: number
   max_missing_ingredients?: number
+  min_matching_ingredients?: number  // US4.3
+  limit?: number  // US4.3
+  prioritize_expiring?: boolean  // US4.3
   sort_by?: 'match_score' | 'preparation_time' | 'calories' | 'expiring_ingredients'
   sort_order?: 'asc' | 'desc'
   use_preferences?: boolean
@@ -102,6 +105,16 @@ class RecommendationsAPI {
     }
     if (params.max_missing_ingredients !== undefined) {
       searchParams.append('max_missing_ingredients', params.max_missing_ingredients.toString());
+    }
+    // US4.3 new parameters
+    if (params.min_matching_ingredients !== undefined) {
+      searchParams.append('min_matching_ingredients', params.min_matching_ingredients.toString());
+    }
+    if (params.limit !== undefined) {
+      searchParams.append('limit', params.limit.toString());
+    }
+    if (params.prioritize_expiring !== undefined) {
+      searchParams.append('prioritize_expiring', params.prioritize_expiring.toString());
     }
     if (params.sort_by) {
       searchParams.append('sort_by', params.sort_by);

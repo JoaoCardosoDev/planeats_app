@@ -30,7 +30,10 @@ class RecommendationService:
         user_id: int,
         filters: Optional[RecommendationFilters] = None,
         sort: Optional[RecommendationSort] = None,
-        use_preferences: bool = True
+        use_preferences: bool = True,
+        min_matching_ingredients: Optional[int] = None,
+        limit: Optional[int] = None,
+        prioritize_expiring: bool = False
     ) -> RecipeRecommendationsResponse:
         """
         Get recipe recommendations based on user's pantry items with filtering, sorting, and preferences
@@ -130,14 +133,32 @@ class RecommendationService:
         
         total_before_filters = len(recommendations)
         
+        # Apply US4.3 min_matching_ingredients filter
+        if min_matching_ingredients is not None:
+            recommendations = [
+                r for r in recommendations 
+                if len(r.matching_ingredients) >= min_matching_ingredients
+            ]
+            logger.info(f"After min_matching_ingredients filter ({min_matching_ingredients}): {len(recommendations)} recommendations remain")
+        
         # Apply additional filters
         filtered_recommendations = self._apply_filters(recommendations, filters)
         
-        # Apply sorting
-        sorted_recommendations = self._apply_sorting(filtered_recommendations, sort)
+        # Apply US4.3 prioritize_expiring logic
+        if prioritize_expiring:
+            # Sort by expiring ingredients first (recipes with expiring ingredients come first)
+            filtered_recommendations = sorted(
+                filtered_recommendations, 
+                key=lambda x: (len(x.expiring_ingredients_used) == 0, -len(x.expiring_ingredients_used), -x.match_score)
+            )
+            logger.info(f"Applied prioritize_expiring: recipes with expiring ingredients prioritized")
+        else:
+            # Apply normal sorting
+            filtered_recommendations = self._apply_sorting(filtered_recommendations, sort)
         
-        # Limit to max recommendations
-        final_recommendations = sorted_recommendations[:self.max_recommendations]
+        # Apply US4.3 limit parameter
+        max_limit = limit if limit is not None else self.max_recommendations
+        final_recommendations = filtered_recommendations[:max_limit]
         
         message = None
         if not final_recommendations:
@@ -459,7 +480,10 @@ def get_recipe_recommendations(
     user_id: int,
     filters: Optional[RecommendationFilters] = None,
     sort: Optional[RecommendationSort] = None,
-    use_preferences: bool = True
+    use_preferences: bool = True,
+    min_matching_ingredients: Optional[int] = None,
+    limit: Optional[int] = None,
+    prioritize_expiring: bool = False
 ) -> RecipeRecommendationsResponse:
     """Service function for the API endpoint"""
     return recommendation_service.get_recommendations(
@@ -467,5 +491,8 @@ def get_recipe_recommendations(
         user_id=user_id, 
         filters=filters, 
         sort=sort,
-        use_preferences=use_preferences
+        use_preferences=use_preferences,
+        min_matching_ingredients=min_matching_ingredients,
+        limit=limit,
+        prioritize_expiring=prioritize_expiring
     )

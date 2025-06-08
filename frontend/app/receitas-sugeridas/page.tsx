@@ -138,7 +138,7 @@ export default function ReceitasSugeridas() {
         {/* Filter Controls */}
         <div className="bg-white p-6 rounded-lg shadow-md">
           <h2 className="text-xl font-semibold mb-4 text-green-700">Filtros</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Tempo máximo (min)
@@ -178,6 +178,33 @@ export default function ReceitasSugeridas() {
               />
             </div>
             
+            {/* US4.3 New Filters */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Mín. ingredientes que tenho
+              </label>
+              <input
+                type="number"
+                value={filters.min_matching_ingredients || ''}
+                onChange={(e) => handleFilterChange('min_matching_ingredients', e.target.value ? parseInt(e.target.value) : undefined)}
+                className="w-full p-2 border border-gray-300 rounded-md"
+                placeholder="Ex: 2"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Limite de receitas
+              </label>
+              <input
+                type="number"
+                value={filters.limit || ''}
+                onChange={(e) => handleFilterChange('limit', e.target.value ? parseInt(e.target.value) : undefined)}
+                className="w-full p-2 border border-gray-300 rounded-md"
+                placeholder="Ex: 10"
+              />
+            </div>
+            
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Ordenar por
@@ -199,7 +226,7 @@ export default function ReceitasSugeridas() {
             </div>
           </div>
           
-          <div className="mt-4 flex items-center gap-4">
+          <div className="mt-4 flex items-center gap-4 flex-wrap">
             <label className="flex items-center">
               <input
                 type="checkbox"
@@ -208,6 +235,17 @@ export default function ReceitasSugeridas() {
                 className="mr-2"
               />
               Usar minhas preferências
+            </label>
+            
+            {/* US4.3 Prioritize Expiring Filter */}
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                checked={filters.prioritize_expiring || false}
+                onChange={(e) => handleFilterChange('prioritize_expiring', e.target.checked)}
+                className="mr-2"
+              />
+              Priorizar ingredientes a expirar
             </label>
             
             <Select 

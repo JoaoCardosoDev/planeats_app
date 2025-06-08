@@ -40,6 +40,22 @@ def get_recommendations(
         ge=0,
         le=20
     ),
+    min_matching_ingredients: Optional[int] = Query(
+        None,
+        description="Minimum number of matching ingredients required (US4.3)",
+        ge=1,
+        le=50
+    ),
+    limit: Optional[int] = Query(
+        None,
+        description="Maximum number of recommendations to return (US4.3)",
+        ge=1,
+        le=100
+    ),
+    prioritize_expiring: bool = Query(
+        False,
+        description="Prioritize recipes that use expiring ingredients (US4.3)"
+    ),
     # Sort parameters
     sort_by: Literal["match_score", "preparation_time", "calories", "expiring_ingredients"] = Query(
         "match_score",
@@ -117,6 +133,12 @@ def get_recommendations(
         applied_filters.append(f"max_calories={max_calories}")
     if max_missing_ingredients is not None:
         applied_filters.append(f"max_missing={max_missing_ingredients}")
+    if min_matching_ingredients is not None:
+        applied_filters.append(f"min_matching={min_matching_ingredients}")
+    if limit is not None:
+        applied_filters.append(f"limit={limit}")
+    if prioritize_expiring:
+        applied_filters.append("prioritize_expiring=true")
     
     logger.info(
         f"Filters: {', '.join(applied_filters) if applied_filters else 'none'}, "
@@ -130,7 +152,10 @@ def get_recommendations(
             user_id=current_user.id,
             filters=filters,
             sort=sort,
-            use_preferences=use_preferences
+            use_preferences=use_preferences,
+            min_matching_ingredients=min_matching_ingredients,
+            limit=limit,
+            prioritize_expiring=prioritize_expiring
         )
         
         logger.info(

@@ -259,13 +259,13 @@ export default function Explorar() {
                 <ExploreRecipeCard 
                   key={recipe.id} 
                   id={recipe.id.toString()}
-                  title={recipe.title}
-                  description={recipe.description || "Sem descrição disponível"}
+                  title={recipe.recipe_name}
+                  description={recipe.instructions.substring(0, 100) + "..."}
                   image={recipe.image_url || "/placeholder.svg?height=192&width=384"}
-                  time={formatTime(recipe.prep_time_minutes)}
-                  difficulty={getDifficulty(recipe.prep_time_minutes)}
-                  calories={recipe.calories}
-                  ingredients={recipe.ingredients?.map(ing => ing.name) || []}
+                  time={formatTime(recipe.preparation_time_minutes)}
+                  difficulty={getDifficulty(recipe.preparation_time_minutes)}
+                  calories={recipe.estimated_calories}
+                  ingredients={recipe.ingredients?.map(ing => ing.ingredient_name) || []}
                   onClick={() => handleRecipeClick(recipe.id)} 
                 />
               ))}

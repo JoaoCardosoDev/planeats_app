@@ -60,24 +60,8 @@ async def get_current_active_user(
 
 def get_current_user_optional(
     db: Session = Depends(get_db),
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
 ) -> Optional[User]:
     """Get current user if token is provided, otherwise return None"""
-    if not credentials:
-        return None
-    
-    try:
-        payload = jwt.decode(
-            credentials.credentials, 
-            settings.SECRET_KEY,
-            algorithms=[settings.ALGORITHM]
-        )
-        email: str = payload.get("sub")
-        user_id: int = payload.get("user_id")
-        if email is None:
-            return None
-        
-        user = crud_user.get_by_email(db, email=email)
-        return user
-    except JWTError:
-        return None
+    # For development, return None to allow unauthenticated access
+    # This will be updated when authentication is fully integrated
+    return None

@@ -27,7 +27,8 @@ export default function Cadastro() {
     setIsLoading(true)
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/auth/register`, {
+      // Force localhost for browser requests
+      const response = await fetch('http://localhost:8000/api/v1/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,4 +1,5 @@
 // API service for recipe-related operations
+import { getSession } from 'next-auth/react';
 
 // Use localhost for browser requests (Docker internal URLs don't work from browser)
 const API_BASE_URL = typeof window !== 'undefined' 
@@ -21,23 +22,28 @@ export interface RecipeFilter {
 
 export interface Recipe {
   id: number;
-  title: string;
-  description?: string;
+  recipe_name: string;
   instructions: string;
-  prep_time_minutes?: number;
-  calories?: number;
+  estimated_calories?: number;
+  preparation_time_minutes?: number;
   image_url?: string;
-  created_by_user_id: number;
+  created_by_user_id?: number;
   created_at: string;
   ingredients: RecipeIngredient[];
+  // Additional fields from backend
+  dietary_tags?: string[];
+  cuisine_type?: string;
+  difficulty_level?: string;
+  is_healthy?: boolean;
+  is_comfort_food?: boolean;
+  serving_size?: number;
 }
 
 export interface RecipeIngredient {
   id: number;
-  recipe_id: number;
-  name: string;
-  quantity?: number;
-  unit?: string;
+  ingredient_name: string;
+  required_quantity: number;
+  required_unit: string;
 }
 
 export interface RecipeListResponse {
@@ -47,13 +53,40 @@ export interface RecipeListResponse {
   limit: number;
 }
 
+export interface CreateRecipeIngredient {
+  ingredient_name: string;
+  required_quantity: number;
+  required_unit: string;
+}
+
+export interface CreateRecipeRequest {
+  recipe_name: string;
+  instructions: string;
+  estimated_calories?: number;
+  preparation_time_minutes?: number;
+  image_url?: string;
+  ingredients: CreateRecipeIngredient[];
+  // Additional optional fields
+  dietary_tags?: string[];
+  cuisine_type?: string;
+  difficulty_level?: string;
+  is_healthy?: boolean;
+  is_comfort_food?: boolean;
+  serving_size?: number;
+}
+
 class RecipeAPI {
   private async getAuthHeaders(): Promise<HeadersInit> {
-    // TODO: Integrate with NextAuth.js to get the JWT token
-    // For now, return empty headers - this will be implemented when integrating auth
-    return {
+    const session = await getSession();
+    const headers: HeadersInit = {
       'Content-Type': 'application/json',
     };
+    
+    if (session && (session as any).accessToken) {
+      (headers as any).Authorization = `Bearer ${(session as any).accessToken}`;
+    }
+    
+    return headers;
   }
 
   async getRecipes(filters?: RecipeFilter): Promise<RecipeListResponse> {
@@ -113,6 +146,23 @@ class RecipeAPI {
 
     if (!response.ok) {
       throw new Error(`Failed to fetch recipe: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data;
+  }
+
+  async createRecipe(recipeData: CreateRecipeRequest): Promise<Recipe> {
+    const response = await fetch(`${API_BASE_URL}/api/v1/recipes/`, {
+      method: 'POST',
+      headers: await this.getAuthHeaders(),
+      body: JSON.stringify(recipeData),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('API Error Response:', errorText);
+      throw new Error(`Failed to create recipe: ${response.status} ${response.statusText}. ${errorText}`);
     }
 
     const data = await response.json();

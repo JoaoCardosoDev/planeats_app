@@ -11,31 +11,42 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Plus, X, Upload } from "lucide-react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { useAppStore } from "@/lib/store"
 import { toast } from "sonner"
+import { recipeAPI, CreateRecipeRequest, CreateRecipeIngredient } from "@/lib/api/recipes"
+
+interface IngredientInput {
+  name: string
+  quantity: string
+  unit: string
+}
 
 export default function AdicionarReceita() {
   const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    time: "",
-    difficulty: "",
-    category: "",
-    image: "",
+    recipe_name: "",
+    instructions: "",
+    estimated_calories: "",
+    preparation_time_minutes: "",
+    image_url: "",
+    cuisine_type: "",
+    difficulty_level: "",
+    serving_size: "",
   })
-  const [ingredients, setIngredients] = useState<string[]>([])
-  const [newIngredient, setNewIngredient] = useState("")
-  const [instructions, setInstructions] = useState<string[]>([])
-  const [newInstruction, setNewInstruction] = useState("")
+  const [ingredients, setIngredients] = useState<IngredientInput[]>([])
+  const [newIngredient, setNewIngredient] = useState<IngredientInput>({
+    name: "",
+    quantity: "",
+    unit: ""
+  })
   const [isLoading, setIsLoading] = useState(false)
 
-  const { addRecipe, user } = useAppStore()
   const router = useRouter()
 
   const addIngredient = () => {
-    if (newIngredient.trim()) {
-      setIngredients([...ingredients, newIngredient.trim()])
-      setNewIngredient("")
+    if (newIngredient.name.trim() && newIngredient.quantity.trim() && newIngredient.unit.trim()) {
+      setIngredients([...ingredients, { ...newIngredient }])
+      setNewIngredient({ name: "", quantity: "", unit: "" })
+    } else {
+      toast.error("Por favor, preencha nome, quantidade e unidade do ingrediente")
     }
   }
 
@@ -43,56 +54,90 @@ export default function AdicionarReceita() {
     setIngredients(ingredients.filter((_, i) => i !== index))
   }
 
-  const addInstruction = () => {
-    if (newInstruction.trim()) {
-      setInstructions([...instructions, newInstruction.trim()])
-      setNewInstruction("")
-    }
-  }
-
-  const removeInstruction = (index: number) => {
-    setInstructions(instructions.filter((_, i) => i !== index))
-  }
-
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
-      // Simular upload de imagem
+      // Simular upload de imagem - em produção seria feito upload para um servidor
       const imageUrl = URL.createObjectURL(file)
-      setFormData({ ...formData, image: imageUrl })
+      setFormData({ ...formData, image_url: imageUrl })
       toast.success("Imagem carregada com sucesso!")
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const parseTimeInput = (timeStr: string): number | undefined => {
+    if (!timeStr.trim()) return undefined
+    
+    // Parse various time formats: "30", "30 min", "1h 30min", "1.5h", etc.
+    const timeRegex = /(\d+(?:\.\d+)?)\s*(h|hora|horas|m|min|minuto|minutos)?/gi
+    const matches = [...timeStr.matchAll(timeRegex)]
+    
+    let totalMinutes = 0
+    for (const match of matches) {
+      const value = parseFloat(match[1])
+      const unit = match[2]?.toLowerCase()
+      
+      if (unit && (unit.startsWith('h') || unit === 'hora' || unit === 'horas')) {
+        totalMinutes += value * 60
+      } else {
+        totalMinutes += value
+      }
+    }
+    
+    return totalMinutes > 0 ? Math.round(totalMinutes) : undefined
+  }
+
+  const parseQuantity = (quantityStr: string): number => {
+    // Parse quantity: "2", "1.5", "1/2", etc.
+    if (quantityStr.includes('/')) {
+      const [num, den] = quantityStr.split('/')
+      return parseFloat(num) / parseFloat(den)
+    }
+    return parseFloat(quantityStr) || 0
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!formData.title || !formData.description || ingredients.length === 0 || instructions.length === 0) {
-      toast.error("Por favor, preencha todos os campos obrigatórios")
+    if (!formData.recipe_name.trim() || !formData.instructions.trim() || ingredients.length === 0) {
+      toast.error("Por favor, preencha nome da receita, instruções e adicione pelo menos um ingrediente")
       return
     }
 
     setIsLoading(true)
 
     try {
-      addRecipe({
-        title: formData.title,
-        description: formData.description,
-        image: formData.image || "/placeholder.svg?height=192&width=384",
-        time: formData.time,
-        difficulty: formData.difficulty,
-        category: formData.category,
-        ingredients,
-        instructions,
-        isFavorite: false,
-        isOwn: true,
-        author: user?.name || "Usuário",
-      })
+      // Convert ingredients to API format
+      const apiIngredients: CreateRecipeIngredient[] = ingredients.map(ing => ({
+        ingredient_name: ing.name,
+        required_quantity: parseQuantity(ing.quantity),
+        required_unit: ing.unit
+      }))
 
+      // Prepare recipe data for API
+      const recipeData: CreateRecipeRequest = {
+        recipe_name: formData.recipe_name,
+        instructions: formData.instructions,
+        ingredients: apiIngredients,
+        estimated_calories: formData.estimated_calories ? parseInt(formData.estimated_calories) : undefined,
+        preparation_time_minutes: parseTimeInput(formData.preparation_time_minutes),
+        image_url: formData.image_url || undefined,
+        cuisine_type: formData.cuisine_type || undefined,
+        difficulty_level: formData.difficulty_level || undefined,
+        serving_size: formData.serving_size ? parseInt(formData.serving_size) : undefined,
+      }
+
+      console.log('Creating recipe with data:', recipeData)
+
+      const newRecipe = await recipeAPI.createRecipe(recipeData)
+      
       toast.success("Receita criada com sucesso!")
-      router.push("/minhas-receitas")
+      router.push(`/receita/${newRecipe.id}`)
     } catch (error) {
-      toast.error("Erro ao criar receita")
+      console.error('Error creating recipe:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao criar receita'
+      toast.error('Erro ao criar receita', {
+        description: errorMessage
+      })
     } finally {
       setIsLoading(false)
     }
@@ -121,71 +166,97 @@ export default function AdicionarReceita() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="title">Nome da Receita *</Label>
+                    <Label htmlFor="recipe_name">Nome da Receita *</Label>
                     <Input
-                      id="title"
+                      id="recipe_name"
                       placeholder="Ex: Arroz de Frango"
-                      value={formData.title}
-                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                      value={formData.recipe_name}
+                      onChange={(e) => setFormData({ ...formData, recipe_name: e.target.value })}
                       required
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="description">Descrição *</Label>
+                    <Label htmlFor="instructions">Instruções *</Label>
                     <Textarea
-                      id="description"
-                      placeholder="Breve descrição da receita"
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      id="instructions"
+                      placeholder="Descreva o modo de preparo da receita, passo a passo..."
+                      value={formData.instructions}
+                      onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
+                      className="min-h-[120px]"
                       required
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="time">Tempo de Preparo</Label>
+                      <Label htmlFor="preparation_time_minutes">Tempo de Preparo</Label>
                       <Input
-                        id="time"
-                        placeholder="Ex: 40 min"
-                        value={formData.time}
-                        onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+                        id="preparation_time_minutes"
+                        placeholder="Ex: 40 min, 1h 30min"
+                        value={formData.preparation_time_minutes}
+                        onChange={(e) => setFormData({ ...formData, preparation_time_minutes: e.target.value })}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="difficulty">Dificuldade</Label>
-                      <Select
-                        value={formData.difficulty}
-                        onValueChange={(value) => setFormData({ ...formData, difficulty: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Fácil">Fácil</SelectItem>
-                          <SelectItem value="Médio">Médio</SelectItem>
-                          <SelectItem value="Difícil">Difícil</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <Label htmlFor="estimated_calories">Calorias</Label>
+                      <Input
+                        id="estimated_calories"
+                        type="number"
+                        placeholder="Ex: 350"
+                        value={formData.estimated_calories}
+                        onChange={(e) => setFormData({ ...formData, estimated_calories: e.target.value })}
+                      />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="category">Categoria</Label>
+                      <Label htmlFor="serving_size">Porções</Label>
+                      <Input
+                        id="serving_size"
+                        type="number"
+                        placeholder="Ex: 4"
+                        value={formData.serving_size}
+                        onChange={(e) => setFormData({ ...formData, serving_size: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="difficulty_level">Dificuldade</Label>
                       <Select
-                        value={formData.category}
-                        onValueChange={(value) => setFormData({ ...formData, category: value })}
+                        value={formData.difficulty_level}
+                        onValueChange={(value) => setFormData({ ...formData, difficulty_level: value })}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Café da Manhã">Café da Manhã</SelectItem>
-                          <SelectItem value="Almoço">Almoço</SelectItem>
-                          <SelectItem value="Jantar">Jantar</SelectItem>
-                          <SelectItem value="Sobremesa">Sobremesa</SelectItem>
-                          <SelectItem value="Lanche">Lanche</SelectItem>
+                          <SelectItem value="easy">Fácil</SelectItem>
+                          <SelectItem value="medium">Médio</SelectItem>
+                          <SelectItem value="hard">Difícil</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="cuisine_type">Tipo de Cozinha</Label>
+                    <Select
+                      value={formData.cuisine_type}
+                      onValueChange={(value) => setFormData({ ...formData, cuisine_type: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o tipo de cozinha" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="portuguese">Portuguesa</SelectItem>
+                        <SelectItem value="italian">Italiana</SelectItem>
+                        <SelectItem value="asian">Asiática</SelectItem>
+                        <SelectItem value="mexican">Mexicana</SelectItem>
+                        <SelectItem value="indian">Indiana</SelectItem>
+                        <SelectItem value="french">Francesa</SelectItem>
+                        <SelectItem value="mediterranean">Mediterrânea</SelectItem>
+                        <SelectItem value="brazilian">Brasileira</SelectItem>
+                        <SelectItem value="international">Internacional</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </CardContent>
               </Card>
@@ -196,61 +267,44 @@ export default function AdicionarReceita() {
                   <CardTitle>Ingredientes *</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex gap-2">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
                     <Input
-                      placeholder="Ex: 2 xícaras de arroz"
-                      value={newIngredient}
-                      onChange={(e) => setNewIngredient(e.target.value)}
-                      onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addIngredient())}
+                      placeholder="Nome do ingrediente"
+                      value={newIngredient.name}
+                      onChange={(e) => setNewIngredient({ ...newIngredient, name: e.target.value })}
+                    />
+                    <Input
+                      placeholder="Quantidade"
+                      value={newIngredient.quantity}
+                      onChange={(e) => setNewIngredient({ ...newIngredient, quantity: e.target.value })}
+                    />
+                    <Input
+                      placeholder="Unidade"
+                      value={newIngredient.unit}
+                      onChange={(e) => setNewIngredient({ ...newIngredient, unit: e.target.value })}
                     />
                     <Button type="button" onClick={addIngredient}>
                       <Plus className="h-4 w-4" />
+                      Adicionar
                     </Button>
                   </div>
 
                   <div className="space-y-2">
                     {ingredients.map((ingredient, index) => (
-                      <div key={index} className="flex items-center justify-between p-2 bg-muted rounded">
-                        <span>{ingredient}</span>
+                      <div key={index} className="flex items-center justify-between p-3 bg-muted rounded">
+                        <span>
+                          {ingredient.quantity} {ingredient.unit} de {ingredient.name}
+                        </span>
                         <Button type="button" variant="ghost" size="sm" onClick={() => removeIngredient(index)}>
                           <X className="h-4 w-4" />
                         </Button>
                       </div>
                     ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Modo de preparo */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Modo de Preparo *</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex gap-2">
-                    <Textarea
-                      placeholder="Descreva um passo do preparo"
-                      value={newInstruction}
-                      onChange={(e) => setNewInstruction(e.target.value)}
-                      className="min-h-[80px]"
-                    />
-                    <Button type="button" onClick={addInstruction} className="self-start">
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  <div className="space-y-2">
-                    {instructions.map((instruction, index) => (
-                      <div key={index} className="flex gap-3 p-3 bg-muted rounded">
-                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-green-600 font-semibold text-sm shrink-0">
-                          {index + 1}
-                        </div>
-                        <span className="flex-1">{instruction}</span>
-                        <Button type="button" variant="ghost" size="sm" onClick={() => removeInstruction(index)}>
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
+                    {ingredients.length === 0 && (
+                      <p className="text-muted-foreground text-center py-4">
+                        Nenhum ingrediente adicionado ainda
+                      </p>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -265,10 +319,10 @@ export default function AdicionarReceita() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {formData.image && (
+                    {formData.image_url && (
                       <div className="relative h-32 w-full rounded-lg overflow-hidden">
                         <img
-                          src={formData.image || "/placeholder.svg"}
+                          src={formData.image_url}
                           alt="Preview"
                           className="w-full h-full object-cover"
                         />
@@ -299,14 +353,34 @@ export default function AdicionarReceita() {
                   <p>• Seja específico nas quantidades dos ingredientes</p>
                   <p>• Descreva cada passo de forma clara e objetiva</p>
                   <p>• Adicione uma foto atrativa da receita pronta</p>
-                  <p>• Inclua dicas especiais ou variações da receita</p>
+                  <p>• Use unidades padrão: xícaras, colheres, gramas, etc.</p>
+                  <p>• Indique o tempo total incluindo preparo e cozimento</p>
+                </CardContent>
+              </Card>
+
+              {/* Preview dos dados */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Resumo</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  <p><strong>Ingredientes:</strong> {ingredients.length}</p>
+                  {formData.preparation_time_minutes && (
+                    <p><strong>Tempo:</strong> {formData.preparation_time_minutes}</p>
+                  )}
+                  {formData.estimated_calories && (
+                    <p><strong>Calorias:</strong> {formData.estimated_calories} kcal</p>
+                  )}
+                  {formData.serving_size && (
+                    <p><strong>Porções:</strong> {formData.serving_size} pessoas</p>
+                  )}
                 </CardContent>
               </Card>
             </div>
           </div>
 
           <div className="flex justify-end gap-4">
-            <Button type="button" variant="outline" onClick={() => router.back()}>
+            <Button type="button" variant="outline" onClick={() => router.back()} disabled={isLoading}>
               Cancelar
             </Button>
             <Button type="submit" className="bg-green-600 hover:bg-green-700" disabled={isLoading}>

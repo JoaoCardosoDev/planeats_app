@@ -160,5 +160,60 @@ class CRUDRecipe(CRUDBase[Recipe, RecipeCreate, RecipeUpdate]):
         query = query.offset(skip).limit(limit)
         
         return db.exec(query).all()
+    
+    def count_with_filters(
+        self,
+        db: Session,
+        *,
+        user_id: Optional[int] = None,
+        user_created_only: Optional[bool] = None,
+        max_calories: Optional[int] = None,
+        max_prep_time: Optional[int] = None,
+        ingredients: Optional[List[str]] = None
+    ) -> int:
+        """
+        Count recipes with filtering support for pagination
+        """
+        from sqlmodel import func
+        
+        # Start with base query for counting
+        query = select(func.count(Recipe.id))
+        
+        # Apply same filters as get_multi_with_filters
+        if user_created_only:
+            query = query.where(Recipe.created_by_user_id == user_id)
+        else:
+            if user_id is not None:
+                query = query.where(
+                    (Recipe.created_by_user_id == user_id) | 
+                    (Recipe.created_by_user_id.is_(None))
+                )
+            else:
+                query = query.where(Recipe.created_by_user_id.is_(None))
+        
+        if max_calories is not None:
+            query = query.where(
+                and_(
+                    Recipe.estimated_calories.is_not(None),
+                    Recipe.estimated_calories <= max_calories
+                )
+            )
+        
+        if max_prep_time is not None:
+            query = query.where(
+                and_(
+                    Recipe.preparation_time_minutes.is_not(None),
+                    Recipe.preparation_time_minutes <= max_prep_time
+                )
+            )
+        
+        if ingredients and len(ingredients) > 0:
+            for ingredient_name in ingredients:
+                ingredient_subquery = select(RecipeIngredient.recipe_id).where(
+                    RecipeIngredient.ingredient_name.ilike(f"%{ingredient_name}%")
+                )
+                query = query.where(Recipe.id.in_(ingredient_subquery))
+        
+        return db.exec(query).one()
 
 recipe = CRUDRecipe(Recipe)

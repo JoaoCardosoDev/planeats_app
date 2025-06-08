@@ -29,16 +29,6 @@ class RecipeBase(SQLModel):
     estimated_calories: Optional[int] = None
     preparation_time_minutes: Optional[int] = None
     image_url: Optional[str] = None
-    
-    # New fields for preference-based recommendations
-    dietary_tags: Optional[List[str]] = Field(default=None, sa_column=Column(JSON))  # ["vegetarian", "gluten_free", etc.]
-    cuisine_type: Optional[str] = None  # "portuguese", "italian", "asian", etc.
-    difficulty_level: Optional[str] = None  # "easy", "medium", "hard"
-    
-    # Additional metadata for better recommendations
-    is_healthy: Optional[bool] = False
-    is_comfort_food: Optional[bool] = False
-    serving_size: Optional[int] = 4  # Default serving size
 
 class Recipe(RecipeBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -66,10 +56,4 @@ class RecipeUpdate(SQLModel):
     estimated_calories: Optional[int] = None
     preparation_time_minutes: Optional[int] = None
     image_url: Optional[str] = None
-    dietary_tags: Optional[List[str]] = None
-    cuisine_type: Optional[str] = None
-    difficulty_level: Optional[str] = None
-    is_healthy: Optional[bool] = None
-    is_comfort_food: Optional[bool] = None
-    serving_size: Optional[int] = None
     ingredients: Optional[List[RecipeIngredientCreate]] = None

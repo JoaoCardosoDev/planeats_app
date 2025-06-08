@@ -1,13 +1,20 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlmodel import Session
 from typing import List, Optional
+from pydantic import BaseModel
 
-from app.api.v1.deps import get_current_user, get_db
+from app.api.v1.deps import get_current_user, get_current_user_optional, get_db
 from app.models.recipe_models import RecipeCreate, RecipeRead
 from app.crud.crud_recipe import recipe as crud_recipe
 from app.models.user_models import User
 
 router = APIRouter()
+
+class RecipeListResponse(BaseModel):
+    recipes: List[RecipeRead]
+    total: int
+    skip: int
+    limit: int
 
 @router.post("/", response_model=RecipeRead)
 def create_recipe(
@@ -25,11 +32,11 @@ def create_recipe(
         user_id=current_user.id
     )
 
-@router.get("/", response_model=List[RecipeRead])
+@router.get("/", response_model=RecipeListResponse)
 def read_recipes(
     *,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_current_user_optional),
     skip: int = 0,
     limit: int = 100,
     # US3.2 Filter parameters
@@ -47,9 +54,13 @@ def read_recipes(
     - max_prep_time: Maximum preparation time in minutes
     - ingredients: List of ingredients that recipes must contain
     """
-    return crud_recipe.get_multi_with_filters(
+    # Get user ID if authenticated, otherwise None
+    user_id = current_user.id if current_user else None
+    
+    # Get filtered recipes
+    recipes = crud_recipe.get_multi_with_filters(
         db=db,
-        user_id=current_user.id,
+        user_id=user_id,
         skip=skip,
         limit=limit,
         user_created_only=user_created_only,
@@ -57,13 +68,30 @@ def read_recipes(
         max_prep_time=max_prep_time,
         ingredients=ingredients
     )
+    
+    # Get total count with same filters
+    total = crud_recipe.count_with_filters(
+        db=db,
+        user_id=user_id,
+        user_created_only=user_created_only,
+        max_calories=max_calories,
+        max_prep_time=max_prep_time,
+        ingredients=ingredients
+    )
+    
+    return RecipeListResponse(
+        recipes=recipes,
+        total=total,
+        skip=skip,
+        limit=limit
+    )
 
 @router.get("/{recipe_id}", response_model=RecipeRead)
 def read_recipe(
     *,
     db: Session = Depends(get_db),
     recipe_id: int,
-    current_user: User = Depends(get_current_user)
+    current_user: Optional[User] = Depends(get_current_user_optional)
 ):
     """
     Get recipe by ID
@@ -77,10 +105,12 @@ def read_recipe(
     
     # Check if user has access to this recipe
     # Users can access their own recipes or system recipes (created_by_user_id is None)
-    if recipe.created_by_user_id is not None and recipe.created_by_user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not enough permissions to access this recipe"
-        )
+    # If no user is authenticated, only allow access to system recipes
+    if recipe.created_by_user_id is not None:
+        if current_user is None or recipe.created_by_user_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not enough permissions to access this recipe"
+            )
     
     return recipe

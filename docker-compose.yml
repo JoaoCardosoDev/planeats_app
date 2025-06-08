@@ -40,6 +40,8 @@ services:
     restart: unless-stopped
     networks:
       - planeats_network
+    # Override Dockerfile CMD to include test data creation for development
+    command: ["./startup.sh"]
 
   db:
     image: postgres:13-alpine

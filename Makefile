@@ -6,7 +6,7 @@ PIP = pip3
 DOCKER_COMPOSE = docker-compose
 
 # Phony targets (targets that are not actual files)
-.PHONY: all build up down logs ps lint test clean help init-alembic frontend-restart frontend-logs backend-restart backend-logs restart-all frontend-shell backend-shell rebuild
+.PHONY: all build up down logs ps lint test clean help init-alembic frontend-restart frontend-logs backend-restart backend-logs restart-all frontend-shell backend-shell rebuild rebuild-no-cache
 
 # Default target
 all: help
@@ -77,6 +77,17 @@ rebuild:
 	$(DOCKER_COMPOSE) up -d
 	@echo "All containers rebuilt and started!"
 
+rebuild-no-cache:
+	@echo "Rebuilding containers with no cache (down -> build --no-cache -> up)..."
+	$(DOCKER_COMPOSE) down
+	@echo "Cleaning up Docker system to ensure complete rebuild..."
+	-docker system prune -f
+	-docker builder prune -f
+	@echo "Building with no cache (this may take longer)..."
+	$(DOCKER_COMPOSE) build --no-cache
+	$(DOCKER_COMPOSE) up -d
+	@echo "All containers rebuilt from scratch and started!"
+
 frontend-shell:
 	@echo "Opening shell in frontend container..."
 	$(DOCKER_COMPOSE) exec frontend sh
@@ -100,6 +111,7 @@ help:
 	@echo "  make up                - Start services using docker-compose"
 	@echo "  make down              - Stop services using docker-compose"
 	@echo "  make rebuild           - Down, rebuild, and start all containers"
+	@echo "  make rebuild-no-cache  - Rebuild completely from scratch (no cache)"
 	@echo "  make logs              - View logs from all services"
 	@echo "  make ps                - List running services"
 	@echo "  make lint              - Run linters"
@@ -114,6 +126,7 @@ help:
 	@echo "  make backend-logs      - Show backend container logs"
 	@echo "  make restart-all       - Restart all containers"
 	@echo "  make rebuild           - Down, rebuild, and start all containers"
+	@echo "  make rebuild-no-cache  - Rebuild completely from scratch (no cache)"
 	@echo "  make frontend-shell    - Open shell in frontend container"
 	@echo "  make backend-shell     - Open shell in backend container"
 	@echo ""

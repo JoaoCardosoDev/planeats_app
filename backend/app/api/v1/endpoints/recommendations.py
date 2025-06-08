@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlmodel import Session
 from typing import Optional, Literal
 import logging
@@ -9,7 +9,8 @@ from app.services.recommendation_service import get_recipe_recommendations
 from app.schemas.recommendations import (
     RecipeRecommendationsResponse, 
     RecommendationFilters, 
-    RecommendationSort
+    RecommendationSort,
+    RecommendationMetadata
 )
 
 router = APIRouter()
@@ -123,17 +124,36 @@ def get_recommendations(
         f"Preferences: {'enabled' if use_preferences else 'disabled'}"
     )
     
-    recommendations = get_recipe_recommendations(
-        db=db, 
-        user_id=current_user.id,
-        filters=filters,
-        sort=sort,
-        use_preferences=use_preferences
-    )
+    try:
+        recommendations = get_recipe_recommendations(
+            db=db, 
+            user_id=current_user.id,
+            filters=filters,
+            sort=sort,
+            use_preferences=use_preferences
+        )
+        
+        logger.info(
+            f"Returning {len(recommendations.recommendations)} recommendations "
+            f"(filtered from {recommendations.metadata.total_before_filters}) for user {current_user.id}"
+        )
+        
+        return recommendations
     
-    logger.info(
-        f"Returning {len(recommendations.recommendations)} recommendations "
-        f"(filtered from {recommendations.metadata.total_before_filters}) for user {current_user.id}"
-    )
-    
-    return recommendations
+    except Exception as e:
+        logger.error(f"Error generating recommendations for user {current_user.id}: {e}", exc_info=True)
+        
+        # Return empty recommendations with error message instead of raising HTTPException
+        # This ensures CORS headers are sent properly
+        return RecipeRecommendationsResponse(
+            recommendations=[],
+            total_pantry_items=0,
+            metadata=RecommendationMetadata(
+                total_recipes_analyzed=0,
+                total_before_filters=0,
+                total_after_filters=0,
+                applied_filters=filters,
+                applied_sort=sort
+            ),
+            message="Erro interno ao gerar recomendações. Tente novamente mais tarde."
+        )

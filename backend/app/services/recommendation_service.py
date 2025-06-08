@@ -46,9 +46,15 @@ class RecommendationService:
         # Get user preferences if enabled
         user_preferences = None
         if use_preferences:
-            user_preferences = user_preference_crud.get_by_user_id(db, user_id=user_id)
-            if user_preferences:
-                logger.info(f"Using user preferences for recommendations: dietary_restrictions={user_preferences.dietary_restrictions}, preferred_cuisines={user_preferences.preferred_cuisines}")
+            try:
+                user_preferences = user_preference_crud.get_by_user_id(db, user_id=user_id)
+                if user_preferences:
+                    logger.info(f"Using user preferences for recommendations: dietary_restrictions={user_preferences.dietary_restrictions}, preferred_cuisines={user_preferences.preferred_cuisines}")
+                else:
+                    logger.info(f"No user preferences found for user {user_id}, proceeding without preferences")
+            except Exception as e:
+                logger.warning(f"Error loading user preferences for user {user_id}: {e}. Proceeding without preferences.")
+                user_preferences = None
         
         # Get user's pantry items
         pantry_items = db.exec(

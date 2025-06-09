@@ -105,7 +105,7 @@ def update_pantry_item(
     return updated_item
 
 
-@router.delete("/items/{item_id}")
+@router.delete("/items/{item_id}", status_code=204)
 def delete_pantry_item(
     *,
     db: Session = Depends(get_db),
@@ -122,4 +122,4 @@ def delete_pantry_item(
     )
     if not item:
         raise HTTPException(status_code=404, detail="Pantry item not found")
-    return {"message": "Pantry item deleted successfully"}
+    return None

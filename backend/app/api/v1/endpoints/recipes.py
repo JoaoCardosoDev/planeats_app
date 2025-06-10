@@ -41,6 +41,8 @@ def read_recipes(
     limit: int = 100,
     # US3.2 Filter parameters
     user_created_only: Optional[bool] = Query(None, description="Filter to show only recipes created by the current user"),
+    imported_only: Optional[bool] = Query(None, description="Filter to show only recipes imported by the current user"),
+    search: Optional[str] = Query(None, description="Search term for recipe name or instructions"), # Added search
     max_calories: Optional[int] = Query(None, description="Maximum calories per recipe"),
     max_prep_time: Optional[int] = Query(None, description="Maximum preparation time in minutes"),
     ingredients: Optional[List[str]] = Query(None, description="Filter recipes that contain these ingredients")
@@ -48,8 +50,10 @@ def read_recipes(
     """
     Retrieve recipes with optional filtering
     
-    Filters available (US3.2):
+    Filters available:
     - user_created_only: Show only recipes created by current user
+    - imported_only: Show only recipes imported by current user
+    - search: Search term for recipe name or instructions
     - max_calories: Maximum calories per recipe
     - max_prep_time: Maximum preparation time in minutes
     - ingredients: List of ingredients that recipes must contain
@@ -64,6 +68,8 @@ def read_recipes(
         skip=skip,
         limit=limit,
         user_created_only=user_created_only,
+        imported_only=imported_only, # Added imported_only
+        search=search, # Added search
         max_calories=max_calories,
         max_prep_time=max_prep_time,
         ingredients=ingredients
@@ -74,6 +80,8 @@ def read_recipes(
         db=db,
         user_id=user_id,
         user_created_only=user_created_only,
+        imported_only=imported_only, # Added imported_only
+        search=search, # Added search
         max_calories=max_calories,
         max_prep_time=max_prep_time,
         ingredients=ingredients

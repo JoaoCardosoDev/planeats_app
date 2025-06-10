@@ -135,6 +135,29 @@ export default function ReceitasSugeridas() {
           <p className="text-green-600">Receitas baseadas nos ingredientes do seu frigorífico</p>
         </div>
 
+        {/* AI Recipe Creation Button */}
+        <div className="bg-gradient-to-r from-purple-50 to-green-50 border border-purple-200 rounded-lg p-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="bg-purple-100 p-3 rounded-full">
+                <Sparkles className="h-6 w-6 text-purple-600" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-800">Criar Receita com IA</h2>
+                <p className="text-sm text-gray-600">
+                  Use inteligência artificial para criar receitas personalizadas com seus ingredientes
+                </p>
+              </div>
+            </div>
+            <Button asChild className="bg-purple-600 hover:bg-purple-700 text-white shadow-md">
+              <Link href="/receita-ia">
+                <Sparkles className="mr-2 h-4 w-4" />
+                Gerar Receita IA
+              </Link>
+            </Button>
+          </div>
+        </div>
+
         {/* Filter Controls */}
         <div className="bg-white p-6 rounded-lg shadow-md">
           <h2 className="text-xl font-semibold mb-4 text-green-700">Filtros</h2>

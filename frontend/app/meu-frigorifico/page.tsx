@@ -13,6 +13,7 @@ import Image from "next/image"
 import { useState, useEffect } from "react"
 import { toast } from "sonner"
 import { pantryAPI, type PantryItemRead, type PantryFilters as PantryFiltersType } from "@/lib/api/pantry"
+import { AuthGuard } from "@/components/auth/AuthGuard"
 import { PantryFilters } from "@/components/pantry/PantryFilters"
 import {
   AlertDialog,
@@ -35,7 +36,7 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 
-export default function MeuFrigorifico() {
+function MeuFrigorificoContent() {
   const [pantryItems, setPantryItems] = useState<PantryItemRead[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
@@ -396,5 +397,13 @@ export default function MeuFrigorifico() {
         </Dialog>
       </div>
     </div>
+  )
+}
+
+export default function MeuFrigorifico() {
+  return (
+    <AuthGuard>
+      <MeuFrigorificoContent />
+    </AuthGuard>
   )
 }

@@ -13,6 +13,8 @@ console.log('Running in browser:', typeof window !== 'undefined');
 
 export interface RecipeFilter {
   user_created_only?: boolean;
+  imported_only?: boolean;
+  search?: string;
   max_calories?: number;
   max_prep_time?: number;
   ingredients?: string[];
@@ -96,6 +98,14 @@ class RecipeAPI {
       params.append('user_created_only', filters.user_created_only.toString());
     }
     
+    if (filters?.imported_only !== undefined) {
+      params.append('imported_only', filters.imported_only.toString());
+    }
+    
+    if (filters?.search !== undefined) {
+      params.append('search', filters.search);
+    }
+    
     if (filters?.max_calories !== undefined) {
       params.append('max_calories', filters.max_calories.toString());
     }
@@ -167,6 +177,19 @@ class RecipeAPI {
 
     const data = await response.json();
     return data;
+  }
+
+  async deleteRecipe(id: number): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/api/v1/recipes/${id}`, {
+      method: 'DELETE',
+      headers: await this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('API Error Response:', errorText);
+      throw new Error(`Failed to delete recipe: ${response.status} ${response.statusText}. ${errorText}`);
+    }
   }
 }
 

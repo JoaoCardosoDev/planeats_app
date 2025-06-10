@@ -19,19 +19,14 @@ import { toast } from "sonner"
 
 export default function Header() {
   const { data: session, status } = useSession()
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   const handleLogout = async () => {
     await signOut({ callbackUrl: "/" })
     toast.success("Logout realizado com sucesso!")
   }
 
-  // Evitar problemas de hidratação
-  if (!mounted) {
+  // Show a loading state or minimal header if session status is loading
+  if (status === "loading") {
     return (
       <header className="sticky top-0 z-50 w-full border-b border-green-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 shadow-sm">
         <div className="container flex h-16 items-center justify-between">
@@ -41,14 +36,17 @@ export default function Header() {
               Plan<span className="text-amber-500">Eats</span>
             </span>
           </Link>
-          <div className="flex items-center gap-4">
-            <div className="w-8 h-8 bg-green-100 rounded-full animate-pulse" />
+          {/* Placeholder for auth buttons to prevent layout shift */}
+          <div className="flex items-center gap-2">
+            <div className="h-9 w-20 rounded-md bg-gray-200 animate-pulse"></div>
+            <div className="h-9 w-24 rounded-md bg-gray-200 animate-pulse"></div>
           </div>
         </div>
       </header>
-    )
+    );
   }
-   return (
+
+  return (
     <header className="sticky top-0 z-50 w-full border-b border-green-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 shadow-sm">
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-2">

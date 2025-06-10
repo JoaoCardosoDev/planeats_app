@@ -7,9 +7,20 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
+import { useState, useEffect } from "react" // Import useState and useEffect
 
 export default function Home() {
   const router = useRouter()
+  const { data: session, status } = useSession()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // console.log("Home page session status:", status) // Kept for debugging if needed
+  // console.log("Home page session data:", session)
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -25,12 +36,25 @@ export default function Home() {
               e reduza o desperdício de alimentos.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 mt-4">
-              <Button asChild size="lg" className="bg-green-600 hover:bg-green-700">
-                <Link href="/cadastro">Criar Conta Grátis</Link>
-              </Button>
-              <Button asChild size="lg" variant="outline">
-                <Link href="/login">Entrar</Link>
-              </Button>
+              {!mounted || status === "loading" ? (
+                <>
+                  <div className="h-11 w-44 rounded-md bg-gray-200 animate-pulse"></div>
+                  <div className="h-11 w-24 rounded-md bg-gray-200 animate-pulse"></div>
+                </>
+              ) : session?.user ? (
+                <Button asChild size="lg" className="bg-green-600 hover:bg-green-700">
+                  <Link href="/meu-frigorifico">Acessar Minha Conta</Link>
+                </Button>
+              ) : (
+                <>
+                  <Button asChild size="lg" className="bg-green-600 hover:bg-green-700">
+                    <Link href="/cadastro">Criar Conta Grátis</Link>
+                  </Button>
+                  <Button asChild size="lg" variant="outline">
+                    <Link href="/login">Entrar</Link>
+                  </Button>
+                </>
+              )}
             </div>
           </div>
           <div className="relative h-[400px] w-full rounded-xl overflow-hidden shadow-xl">

@@ -5,6 +5,8 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { pantryAPI, PantryItemRead } from '@/lib/api/pantry';
 import { aiRecipesAPI, CustomRecipeRequest, CustomRecipeResponse } from '@/lib/api/ai-recipes';
+import { recipeAPI, CreateRecipeRequest, CreateRecipeIngredient } from '@/lib/api/recipes'; // Added imports
+import { toast } from 'sonner'; // Added import
 
 interface GeneratedRecipeIngredient {
   name: string;
@@ -24,33 +26,29 @@ export default function AIRecipePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   
-  // State for pantry items and selection
   const [pantryItems, setPantryItems] = useState<PantryItemRead[]>([]);
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
   
-  // State for form inputs
   const [maxCalories, setMaxCalories] = useState<string>('');
   const [prepTimeLimit, setPrepTimeLimit] = useState<string>('');
   const [dietaryRestrictions, setDietaryRestrictions] = useState<string>('');
   const [cuisinePreference, setCuisinePreference] = useState<string>('');
   const [additionalNotes, setAdditionalNotes] = useState<string>('');
   
-  // State for generation process
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedRecipe, setGeneratedRecipe] = useState<CustomRecipeResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showResult, setShowResult] = useState(false);
+  const [isSaving, setIsSaving] = useState(false); // New state for saving
 
-  // Check authentication
   useEffect(() => {
     if (status === 'loading') return;
     if (!session) {
-      router.push('/auth/signin');
+      router.push('/auth/signin'); // Corrected to /auth/signin or your actual login path
       return;
     }
   }, [session, status, router]);
 
-  // Load pantry items
   useEffect(() => {
     if (session) {
       loadPantryItems();
@@ -117,6 +115,48 @@ export default function AIRecipePage() {
     setError(null);
   };
 
+  const handleSaveRecipe = async () => {
+    if (!generatedRecipe || !session?.user) {
+      toast.error("Nenhuma receita para salvar ou usuário não autenticado.");
+      return;
+    }
+
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      const aiRecipe = generatedRecipe.generated_recipe;
+      const recipeToSave: CreateRecipeRequest = {
+        recipe_name: aiRecipe.recipe_name,
+        instructions: aiRecipe.instructions,
+        estimated_calories: aiRecipe.estimated_calories,
+        preparation_time_minutes: aiRecipe.preparation_time_minutes,
+        // image_url: undefined, // AI recipes might not have images, or you can add a placeholder
+        ingredients: aiRecipe.ingredients.map(ing => ({
+          ingredient_name: ing.name,
+          required_quantity: ing.quantity,
+          required_unit: ing.unit,
+        })),
+      };
+
+      const savedRecipe = await recipeAPI.createRecipe(recipeToSave);
+      toast.success(`Receita "${savedRecipe.recipe_name}" salva com sucesso!`, {
+        action: {
+          label: "Ver em Minhas Receitas",
+          onClick: () => router.push('/minhas-receitas'),
+        },
+      });
+      // Optionally, you could reset the form or navigate away
+      // resetForm(); 
+    } catch (err: any) {
+      console.error('Error saving AI recipe:', err);
+      toast.error('Erro ao salvar receita', { description: err.message });
+      setError(err.message || 'Erro desconhecido ao salvar receita.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   if (status === 'loading') {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -134,7 +174,7 @@ export default function AIRecipePage() {
           <h2 className="text-xl font-semibold text-yellow-800 mb-2">Login Necessário</h2>
           <p className="text-yellow-600 mb-4">Você precisa estar logado para gerar receitas personalizadas.</p>
           <button
-            onClick={() => router.push('/auth/signin')}
+            onClick={() => router.push('/login')} // Corrected to /login
             className="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700"
           >
             Fazer Login
@@ -459,6 +499,20 @@ export default function AIRecipePage() {
                     className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
                   >
                     Imprimir
+                  </button>
+                  <button
+                    onClick={handleSaveRecipe}
+                    disabled={isSaving || !generatedRecipe}
+                    className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center space-x-2"
+                  >
+                    {isSaving ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                        <span>Salvando...</span>
+                      </>
+                    ) : (
+                      <span>Salvar Receita</span>
+                    )}
                   </button>
                 </div>
               </>

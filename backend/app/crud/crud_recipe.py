@@ -98,6 +98,8 @@ class CRUDRecipe(CRUDBase[Recipe, RecipeCreate, RecipeUpdate]):
         skip: int = 0,
         limit: int = 100,
         user_created_only: Optional[bool] = None,
+        imported_only: Optional[bool] = None,
+        search: Optional[str] = None,
         max_calories: Optional[int] = None,
         max_prep_time: Optional[int] = None,
         ingredients: Optional[List[str]] = None
@@ -107,6 +109,7 @@ class CRUDRecipe(CRUDBase[Recipe, RecipeCreate, RecipeUpdate]):
         
         Filters:
         - user_created_only: Show only recipes created by current user
+        - imported_only: Show only recipes imported by the user (not system recipes)
         - max_calories: Maximum calories per recipe
         - max_prep_time: Maximum preparation time in minutes
         - ingredients: List of ingredients that recipes must contain
@@ -114,20 +117,37 @@ class CRUDRecipe(CRUDBase[Recipe, RecipeCreate, RecipeUpdate]):
         # Start with base query
         query = select(Recipe).options(selectinload(Recipe.ingredients))
         
-        # Base access control: user's recipes + system recipes (unless user_created_only is True)
-        if user_created_only:
-            # AC3.2.1: Only recipes created by the user
-            query = query.where(Recipe.created_by_user_id == user_id)
-        else:
-            # Default behavior: user's recipes + system recipes
-            if user_id is not None:
-                query = query.where(
-                    (Recipe.created_by_user_id == user_id) | 
-                    (Recipe.created_by_user_id.is_(None))
-                )
+        # Base access control
+        if user_id is not None:
+            if user_created_only:
+                # Only recipes created by the user
+                query = query.where(Recipe.created_by_user_id == user_id)
+            elif imported_only:
+                # Only recipes imported by the user (created_by_user_id is user_id, but not system)
+                # This assumes imported recipes are assigned to the user
+                query = query.where(Recipe.created_by_user_id == user_id)
             else:
-                # Get only system recipes if no user_id
-                query = query.where(Recipe.created_by_user_id.is_(None))
+                # User's recipes (created + imported)
+                # This ensures "Todas" in "Minhas Receitas" only shows user's items
+                query = query.where(Recipe.created_by_user_id == user_id)
+        else:
+            # No user context - only system recipes (e.g., for a public explore page if we had one)
+            # For "Minhas Receitas", user_id should always be present due to AuthGuard.
+            # If somehow user_id is None here for "Minhas Receitas", it should return nothing.
+            # However, to be safe and align with current behavior for unauthenticated recipe browsing,
+            # we can keep showing system recipes if no user_id is provided.
+            # The AuthGuard on the frontend should prevent unauthenticated access to "Minhas Receitas".
+            query = query.where(Recipe.created_by_user_id.is_(None))
+        
+        # AC3.2.1: Filter by search term
+        if search:
+            search_term = f"%{search.lower()}%"
+            query = query.where(
+                or_(
+                    Recipe.recipe_name.ilike(search_term),
+                    Recipe.instructions.ilike(search_term)
+                )
+            )
         
         # AC3.2.2: Filter by maximum calories
         if max_calories is not None:
@@ -167,6 +187,8 @@ class CRUDRecipe(CRUDBase[Recipe, RecipeCreate, RecipeUpdate]):
         *,
         user_id: Optional[int] = None,
         user_created_only: Optional[bool] = None,
+        imported_only: Optional[bool] = None,
+        search: Optional[str] = None,
         max_calories: Optional[int] = None,
         max_prep_time: Optional[int] = None,
         ingredients: Optional[List[str]] = None
@@ -180,17 +202,27 @@ class CRUDRecipe(CRUDBase[Recipe, RecipeCreate, RecipeUpdate]):
         query = select(func.count(Recipe.id))
         
         # Apply same filters as get_multi_with_filters
-        if user_created_only:
-            query = query.where(Recipe.created_by_user_id == user_id)
-        else:
-            if user_id is not None:
-                query = query.where(
-                    (Recipe.created_by_user_id == user_id) | 
-                    (Recipe.created_by_user_id.is_(None))
-                )
+        if user_id is not None:
+            if user_created_only:
+                query = query.where(Recipe.created_by_user_id == user_id)
+            elif imported_only:
+                query = query.where(Recipe.created_by_user_id == user_id) # Assuming imported recipes are assigned to user
             else:
-                query = query.where(Recipe.created_by_user_id.is_(None))
-        
+                # User's recipes (created + imported)
+                query = query.where(Recipe.created_by_user_id == user_id)
+        else:
+            # No user context - only system recipes
+            query = query.where(Recipe.created_by_user_id.is_(None))
+
+        if search:
+            search_term = f"%{search.lower()}%"
+            query = query.where(
+                or_(
+                    Recipe.recipe_name.ilike(search_term),
+                    Recipe.instructions.ilike(search_term)
+                )
+            )
+            
         if max_calories is not None:
             query = query.where(
                 and_(

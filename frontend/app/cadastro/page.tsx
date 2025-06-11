@@ -61,13 +61,13 @@ export default function Cadastro() {
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
             <Image
-              src="/placeholder-logo.png"
+              src="/images/Logo.png"
               alt="PlanEats Logo"
               width={64}
               height={64}
               className="rounded-full"
               onError={(e) => {
-                e.currentTarget.src = "/placeholder.svg?height=64&width=64"
+                e.currentTarget.src = "/images/Logo.png?height=64&width=64"
               }}
             />
           </div>

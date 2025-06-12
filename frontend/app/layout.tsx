@@ -32,7 +32,7 @@ export default function RootLayout({
             forcedTheme="light"
           >
             <Header />
-            <main className="min-h-screen bg-gradient-to-b from-green-50 to-white">{children}</main>
+            <main className="min-h-screen bg-gradient-to-b from-green-50 to-white pt-16">{children}</main>
             <Toaster position="top-right" richColors />
           </ThemeProvider>
         </SessionProviderWrapper>

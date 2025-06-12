@@ -194,3 +194,9 @@ class RecipeAPI {
 }
 
 export const recipeAPI = new RecipeAPI();
+
+// Export convenience functions
+export const getRecipes = (filters?: RecipeFilter) => recipeAPI.getRecipes(filters);
+export const getRecipeById = (id: number) => recipeAPI.getRecipeById(id);
+export const createRecipe = (recipeData: CreateRecipeRequest) => recipeAPI.createRecipe(recipeData);
+export const deleteRecipe = (id: number) => recipeAPI.deleteRecipe(id);

@@ -16,37 +16,15 @@ import { Menu, Settings, User, LogOut } from "lucide-react"
 import Image from "next/image"
 import { usePathname, useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { useAppStore } from "@/lib/store"
+import { useSession, signOut } from "next-auth/react"
 
 export default function Header() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
-  const { user, logout } = useAppStore()
+  const { data: session, status } = useSession()
+  const isLoggedIn = !!session
 
-  // Verificar se o usuário está em uma página que requer autenticação
-  useEffect(() => {
-    // Páginas que não requerem autenticação (incluindo páginas institucionais)
-    const publicPages = [
-      "/",
-      "/login",
-      "/cadastro",
-      "/sobre",
-      "/contato",
-      "/blog",
-      "/termos",
-      "/privacidade",
-      "/cookies",
-    ]
-
-    // Se a página atual não estiver na lista de páginas públicas, considerar o usuário como logado
-    if (!publicPages.includes(pathname)) {
-      setIsLoggedIn(true)
-    } else {
-      setIsLoggedIn(false)
-    }
-  }, [pathname])
 
   // Detectar scroll para mudar o estilo da navbar
   useEffect(() => {
@@ -59,10 +37,8 @@ export default function Header() {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
-  const handleLogout = () => {
-    logout()
-    setIsLoggedIn(false)
-    router.push("/")
+  const handleLogout = async () => {
+    await signOut({ callbackUrl: "/" })
     toast.success("Logout realizado com sucesso!")
   }
 
@@ -217,8 +193,8 @@ export default function Header() {
                   }`}
                 >
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={user?.avatar || "/placeholder.svg?height=32&width=32"} alt="Foto de perfil" />
-                    <AvatarFallback>{user?.name?.charAt(0) || "U"}</AvatarFallback>
+                    <AvatarImage src={session?.user?.image || "/placeholder.svg?height=32&width=32"} alt="Foto de perfil" />
+                    <AvatarFallback>{session?.user?.name?.charAt(0) || session?.user?.email?.charAt(0) || "U"}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>

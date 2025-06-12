@@ -7,31 +7,54 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useSession } from "next-auth/react"
-import { useState, useEffect } from "react" // Import useState and useEffect
+import { useEffect, useState } from "react"
 
 export default function Home() {
   const router = useRouter()
-  const { data: session, status } = useSession()
-  const [mounted, setMounted] = useState(false)
+  const [isLoaded, setIsLoaded] = useState(false)
 
   useEffect(() => {
-    setMounted(true)
+    setIsLoaded(true)
+
+    // Intersection Observer para animações de scroll
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("visible")
+          }
+        })
+      },
+      { threshold: 0.1 },
+    )
+
+    const elements = document.querySelectorAll(".scroll-fade-in")
+    elements.forEach((el) => observer.observe(el))
+
+    return () => observer.disconnect()
   }, [])
 
-  // console.log("Home page session status:", status) // Kept for debugging if needed
-  // console.log("Home page session data:", session)
+  const handleCreateAccount = () => {
+    router.push("/cadastro")
+  }
+
+  const handleViewRecipes = () => {
+    // Scroll suave para a seção de receitas
+    const recipesSection = document.getElementById("receitas-destaque")
+    if (recipesSection) {
+      recipesSection.scrollIntoView({ behavior: "smooth" })
+    }
+  }
 
   return (
-    <div className="flex flex-col min-h-screen">
-      {/* Hero Section - Com nova imagem de geladeira e transições suaves */}
+    <div className="flex flex-col min-h-screen -mt-16">
+      {/* Hero Section - Fixed height to prevent content hiding */}
       <section
-        className="relative min-h-screen flex items-center justify-center overflow-hidden"
+        className="relative h-screen flex items-center justify-center overflow-hidden"
         style={{
           backgroundImage: "url('/images/planeats.png')",
           backgroundSize: "cover",
           backgroundPosition: "center",
-          backgroundAttachment: "fixed",
         }}
       >
         {/* Overlay gradiente sutil */}
@@ -49,26 +72,22 @@ export default function Home() {
             <p className="text-xl text-white/95 mb-8 max-w-2xl mx-auto drop-shadow-lg leading-relaxed">
               Transforme os ingredientes da sua geladeira em refeições deliciosas e reduza o desperdício de alimentos.
             </p>
-            <div className="flex flex-col sm:flex-row gap-3 mt-4">
-              {!mounted || status === "loading" ? (
-                <>
-                  <div className="h-11 w-44 rounded-md bg-gray-200 animate-pulse"></div>
-                  <div className="h-11 w-24 rounded-md bg-gray-200 animate-pulse"></div>
-                </>
-              ) : session?.user ? (
-                <Button asChild size="lg" className="bg-green-600 hover:bg-green-700">
-                  <Link href="/meu-frigorifico">Acessar Minha Conta</Link>
-                </Button>
-              ) : (
-                <>
-                  <Button asChild size="lg" className="bg-green-600 hover:bg-green-700">
-                    <Link href="/cadastro">Criar Conta Grátis</Link>
-                  </Button>
-                  <Button asChild size="lg" variant="outline">
-                    <Link href="/login">Entrar</Link>
-                  </Button>
-                </>
-              )}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button
+                size="lg"
+                onClick={handleCreateAccount}
+                className="bg-green-600/90 hover:bg-green-700 text-white px-8 py-6 text-lg backdrop-blur-sm border border-green-500/30 shadow-2xl hover:shadow-green-500/25 transition-all duration-300 hover:-translate-y-1"
+              >
+                COMEÇAR
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                className="border-2 border-amber-400/80 text-amber-400 hover:bg-amber-400 hover:text-white px-8 py-6 text-lg transition-all duration-300 backdrop-blur-sm bg-white/10 hover:bg-amber-400 shadow-2xl hover:shadow-amber-500/25 hover:-translate-y-1"
+                onClick={handleViewRecipes}
+              >
+                NOSSAS RECEITAS
+              </Button>
             </div>
           </div>
         </div>

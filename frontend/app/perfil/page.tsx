@@ -43,6 +43,37 @@ export default function Perfil() {
   const [editedPreferences, setEditedPreferences] = useState<Partial<UserPreferences>>({})
   const [newDietaryRestriction, setNewDietaryRestriction] = useState("")
   const [newCuisine, setNewCuisine] = useState("")
+  const [newDislikedIngredient, setNewDislikedIngredient] = useState("")
+
+  // Label mappings for better UX
+  const dietaryRestrictionLabels: { [key: string]: string } = {
+    "vegetarian": "Vegetariano",
+    "vegan": "Vegano",
+    "gluten_free": "Sem Glúten",
+    "lactose_free": "Sem Lactose",
+    "keto": "Keto",
+    "paleo": "Paleo",
+    "mediterranean": "Mediterrânica"
+  }
+
+  const cuisineTypeLabels: { [key: string]: string } = {
+    "portuguese": "Portuguesa",
+    "italian": "Italiana",
+    "asian": "Asiática",
+    "mexican": "Mexicana",
+    "healthy": "Saudável",
+    "comfort_food": "Comfort Food",
+    "mediterranean": "Mediterrânica",
+    "indian": "Indiana",
+    "french": "Francesa",
+    "american": "Americana"
+  }
+
+  const difficultyLabels: { [key: string]: string } = {
+    "easy": "Fácil",
+    "medium": "Médio",
+    "hard": "Difícil"
+  }
 
   // Load user data on mount
   useEffect(() => {
@@ -228,7 +259,6 @@ export default function Perfil() {
               <TabsList className="mb-4">
                 <TabsTrigger value="informacoes">Informações</TabsTrigger>
                 <TabsTrigger value="preferencias">Preferências</TabsTrigger>
-                <TabsTrigger value="conquistas">Conquistas</TabsTrigger>
               </TabsList>
 
               {/* Personal Information Tab */}
@@ -291,7 +321,7 @@ export default function Perfil() {
                       <div className="flex flex-wrap gap-2">
                         {(isEditingPreferences ? editedPreferences.dietary_restrictions : userPreferences?.dietary_restrictions)?.map((restriction, index) => (
                           <Badge key={index} variant="outline" className="flex items-center gap-1">
-                            {restriction}
+                            {dietaryRestrictionLabels[restriction] || restriction}
                             {isEditingPreferences && (
                               <button 
                                 onClick={() => removeDietaryRestriction(restriction)} 
@@ -314,7 +344,7 @@ export default function Perfil() {
                             <option value="">Selecione uma restrição</option>
                             {preferenceOptions?.dietary_restrictions?.map((option) => (
                               <option key={option} value={option}>
-                                {option}
+                                {dietaryRestrictionLabels[option] || option}
                               </option>
                             ))}
                           </select>
@@ -332,7 +362,7 @@ export default function Perfil() {
                       <div className="flex flex-wrap gap-2">
                         {(isEditingPreferences ? editedPreferences.preferred_cuisines : userPreferences?.preferred_cuisines)?.map((cuisine, index) => (
                           <Badge key={index} variant="outline" className="flex items-center gap-1">
-                            {cuisine}
+                            {cuisineTypeLabels[cuisine] || cuisine}
                             {isEditingPreferences && (
                               <button 
                                 onClick={() => removeCuisine(cuisine)} 
@@ -355,7 +385,7 @@ export default function Perfil() {
                             <option value="">Selecione uma cozinha</option>
                             {preferenceOptions?.cuisine_types?.map((option) => (
                               <option key={option} value={option}>
-                                {option}
+                                {cuisineTypeLabels[option] || option}
                               </option>
                             ))}
                           </select>
@@ -383,7 +413,7 @@ export default function Perfil() {
                               <option value="">Qualquer dificuldade</option>
                               {preferenceOptions?.difficulty_levels?.map((option) => (
                                 <option key={option} value={option}>
-                                  {option}
+                                  {difficultyLabels[option] || option}
                                 </option>
                               ))}
                             </select>
@@ -462,80 +492,6 @@ export default function Perfil() {
                 </Card>
               </TabsContent>
 
-              {/* Achievements Tab */}
-              <TabsContent value="conquistas">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Card className="border-green-200 bg-green-50">
-                    <CardContent className="pt-6 text-center">
-                      <div className="flex flex-col items-center gap-2">
-                        <div className="rounded-full bg-green-100 p-3">
-                          <Award className="h-8 w-8 text-green-600" />
-                        </div>
-                        <h3 className="font-medium">Membro Oficial</h3>
-                        <p className="text-sm text-muted-foreground">Fez login no PlanEats</p>
-                        <Badge className="bg-green-600 text-white">Conquistado!</Badge>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Bem-vindo ao PlanEats! Agora você pode salvar suas preferências.
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className={userPreferences?.dietary_restrictions?.length ? "border-amber-200 bg-amber-50" : "border-gray-200"}>
-                    <CardContent className="pt-6 text-center">
-                      <div className="flex flex-col items-center gap-2">
-                        <div className={`rounded-full p-3 ${userPreferences?.dietary_restrictions?.length ? "bg-amber-100" : "bg-gray-100"}`}>
-                          <Award className={`h-8 w-8 ${userPreferences?.dietary_restrictions?.length ? "text-amber-600" : "text-gray-400"}`} />
-                        </div>
-                        <h3 className="font-medium">Saudável</h3>
-                        <p className="text-sm text-muted-foreground">Definiu preferências alimentares</p>
-                        {userPreferences?.dietary_restrictions?.length ? (
-                          <Badge className="bg-amber-600 text-white">Conquistado!</Badge>
-                        ) : (
-                          <Badge variant="outline">Pendente</Badge>
-                        )}
-                        <p className="text-xs text-muted-foreground mt-2">
-                          {userPreferences?.dietary_restrictions?.length 
-                            ? `Você tem ${userPreferences.dietary_restrictions.length} preferências definidas!`
-                            : "Configure suas preferências alimentares para desbloquear esta conquista."
-                          }
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className={recipes.length >= 5 ? "border-blue-200 bg-blue-50" : "border-gray-200"}>
-                    <CardContent className="pt-6 text-center">
-                      <div className="flex flex-col items-center gap-2">
-                        <div className={`rounded-full p-3 ${recipes.length >= 5 ? "bg-blue-100" : "bg-gray-100"}`}>
-                          <Award className={`h-8 w-8 ${recipes.length >= 5 ? "text-blue-600" : "text-gray-400"}`} />
-                        </div>
-                        <h3 className="font-medium">Explorador</h3>
-                        <p className="text-sm text-muted-foreground">Acesse 5+ receitas diferentes</p>
-                        {recipes.length >= 5 ? (
-                          <Badge className="bg-blue-600 text-white">Conquistado!</Badge>
-                        ) : (
-                          <Badge variant="outline">
-                            Em progresso: {recipes.length}/5
-                          </Badge>
-                        )}
-                        <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                          <div 
-                            className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
-                            style={{ width: `${Math.min((recipes.length / 5) * 100, 100)}%` }}
-                          ></div>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          {recipes.length >= 5 
-                            ? `Parabéns! Você tem acesso a ${recipes.length} receitas incríveis!`
-                            : `Continue explorando! Você acessou ${recipes.length} de 5 receitas.`
-                          }
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </TabsContent>
             </Tabs>
           </div>
         </div>

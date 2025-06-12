@@ -88,11 +88,9 @@ export class MealDBApi {
   // Search and Browse Methods
   async searchMealsByName(name: string): Promise<MealDBSearchResponse> {
     const response = await fetch(`${this.baseUrl}/search?name=${encodeURIComponent(name)}`)
-    
     if (!response.ok) {
       throw new Error(`Failed to search meals by name: ${response.statusText}`)
     }
-    
     return response.json()
   }
 
@@ -100,112 +98,89 @@ export class MealDBApi {
     if (letter.length !== 1 || !letter.match(/[a-zA-Z]/)) {
       throw new Error('Letter must be a single alphabetic character')
     }
-    
     const response = await fetch(`${this.baseUrl}/search?letter=${letter.toLowerCase()}`)
-    
     if (!response.ok) {
       throw new Error(`Failed to search meals by letter: ${response.statusText}`)
     }
-    
     return response.json()
   }
 
   async filterMealsByIngredient(ingredient: string): Promise<MealDBSearchResponse> {
     const response = await fetch(`${this.baseUrl}/search?ingredient=${encodeURIComponent(ingredient)}`)
-    
     if (!response.ok) {
       throw new Error(`Failed to filter meals by ingredient: ${response.statusText}`)
     }
-    
     return response.json()
   }
 
   async filterMealsByCategory(category: string): Promise<MealDBSearchResponse> {
     const response = await fetch(`${this.baseUrl}/search?category=${encodeURIComponent(category)}`)
-    
     if (!response.ok) {
       throw new Error(`Failed to filter meals by category: ${response.statusText}`)
     }
-    
     return response.json()
   }
 
   async filterMealsByArea(area: string): Promise<MealDBSearchResponse> {
     const response = await fetch(`${this.baseUrl}/search?area=${encodeURIComponent(area)}`)
-    
     if (!response.ok) {
       throw new Error(`Failed to filter meals by area: ${response.statusText}`)
     }
-    
     return response.json()
   }
 
   async getMealById(mealId: string): Promise<MealDBMeal> {
     const response = await fetch(`${this.baseUrl}/meal/${mealId}`)
-    
     if (!response.ok) {
       if (response.status === 404) {
         throw new Error(`Meal with ID ${mealId} not found`)
       }
       throw new Error(`Failed to get meal: ${response.statusText}`)
     }
-    
     return response.json()
   }
 
   async getRandomMeal(): Promise<MealDBMeal> {
     const response = await fetch(`${this.baseUrl}/random`)
-    
     if (!response.ok) {
       throw new Error(`Failed to get random meal: ${response.statusText}`)
     }
-    
-    return response.json()
+    return response.json() 
   }
 
-  // Categories, Areas, and Ingredients
   async getCategories(): Promise<MealDBCategoriesResponse> {
     const response = await fetch(`${this.baseUrl}/categories`)
-    
     if (!response.ok) {
       throw new Error(`Failed to get categories: ${response.statusText}`)
     }
-    
     return response.json()
   }
 
   async getAreas(): Promise<MealDBAreasResponse> {
     const response = await fetch(`${this.baseUrl}/areas`)
-    
     if (!response.ok) {
       throw new Error(`Failed to get areas: ${response.statusText}`)
     }
-    
     return response.json()
   }
 
   async getIngredients(): Promise<MealDBIngredientsResponse> {
     const response = await fetch(`${this.baseUrl}/ingredients`)
-    
     if (!response.ok) {
       throw new Error(`Failed to get ingredients: ${response.statusText}`)
     }
-    
     return response.json()
   }
 
-  // Import Methods (require authentication)
   async importMeal(mealId: string): Promise<{ message: string; recipe: MealDBImportResult }> {
     const response = await fetch(`${this.baseUrl}/import/${mealId}`, {
       method: 'POST',
       headers: this.headers,
     })
-    
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
       throw new Error(errorData.detail || `Failed to import meal: ${response.statusText}`)
     }
-    
     return response.json()
   }
 
@@ -214,12 +189,10 @@ export class MealDBApi {
       method: 'POST',
       headers: this.headers,
     })
-    
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
       throw new Error(errorData.detail || `Failed to import random meal: ${response.statusText}`)
     }
-    
     return response.json()
   }
 
@@ -227,27 +200,23 @@ export class MealDBApi {
     const response = await fetch(`${this.baseUrl}/suggestions-by-pantry?limit=${limit}`, {
       headers: this.headers,
     })
-    
     if (!response.ok) {
       throw new Error(`Failed to get pantry suggestions: ${response.statusText}`)
     }
-    
     return response.json()
   }
 
-  // Utility Methods
   async testConnection(): Promise<{ status: string; message: string; test_meal?: any }> {
     const response = await fetch(`${this.baseUrl}/test-connection`)
-    
     if (!response.ok) {
       throw new Error(`Failed to test connection: ${response.statusText}`)
     }
-    
     return response.json()
   }
 
   getIngredientImageUrl(ingredientName: string, size: 'small' | 'medium' | 'large' = 'medium'): string {
-    return `${this.baseUrl}/ingredient-image/${encodeURIComponent(ingredientName)}?size=${size}`
+    // This method now correctly returns the URL to our backend proxy, which serves the image.
+    return `${this.baseUrl}/ingredient-image/${encodeURIComponent(ingredientName)}?size=${size}`;
   }
 
   getMealThumbnailUrl(originalUrl: string, size: 'small' | 'medium' | 'large' = 'medium'): string {
@@ -255,19 +224,13 @@ export class MealDBApi {
   }
 }
 
-// Convenience functions for common operations
 export const mealDbApi = {
-  // Create API instance without authentication for public endpoints
   public: () => new MealDBApi(),
-  
-  // Create API instance with authentication for user-specific operations
   authenticated: (token: string) => new MealDBApi(token),
 }
 
-// Hook-style functions for easier use in React components
 export const useMealDBSearch = () => {
   const api = mealDbApi.public()
-  
   return {
     searchByName: (name: string) => api.searchMealsByName(name),
     searchByLetter: (letter: string) => api.searchMealsByLetter(letter),
@@ -279,80 +242,39 @@ export const useMealDBSearch = () => {
     getCategories: () => api.getCategories(),
     getAreas: () => api.getAreas(),
     getIngredients: () => api.getIngredients(),
+    // getIngredientImageUrl is a synchronous method on the api instance now
   }
 }
 
 export const useMealDBImport = (token?: string) => {
-  // For now, we'll handle authentication in the component
-  // This function will make authenticated requests using the session
   return {
     importMeal: async (mealId: string) => {
       const session = await getSession()
       if (!session) {
         throw new Error('Authentication required')
       }
-      
-      const response = await fetch(`${API_BASE_URL}/api/v1/mealdb/import/${mealId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${(session as any).accessToken || 'dummy_token'}`,
-        },
-      })
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.detail || `Failed to import meal: ${response.statusText}`)
-      }
-      
-      return response.json()
+      const api = mealDbApi.authenticated((session as any).accessToken || 'dummy_token');
+      return api.importMeal(mealId);
     },
-    
     importRandomMeal: async () => {
       const session = await getSession()
       if (!session) {
         throw new Error('Authentication required')
       }
-      
-      const response = await fetch(`${API_BASE_URL}/api/v1/mealdb/import-random`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${(session as any).accessToken || 'dummy_token'}`,
-        },
-      })
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.detail || `Failed to import random meal: ${response.statusText}`)
-      }
-      
-      return response.json()
+      const api = mealDbApi.authenticated((session as any).accessToken || 'dummy_token');
+      return api.importRandomMeal();
     },
-    
     getSuggestionsByPantry: async (limit?: number) => {
       const session = await getSession()
       if (!session) {
         throw new Error('Authentication required')
       }
-      
-      const response = await fetch(`${API_BASE_URL}/api/v1/mealdb/suggestions-by-pantry?limit=${limit || 10}`, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${(session as any).accessToken || 'dummy_token'}`,
-        },
-      })
-      
-      if (!response.ok) {
-        throw new Error(`Failed to get pantry suggestions: ${response.statusText}`)
-      }
-      
-      return response.json()
+      const api = mealDbApi.authenticated((session as any).accessToken || 'dummy_token');
+      return api.getSuggestionsByPantry(limit || 10);
     },
   }
 }
 
-// Helper functions for data processing
 export const formatMealForDisplay = (meal: MealDBMeal) => {
   return {
     id: meal.id,
@@ -373,58 +295,24 @@ export const formatIngredientsList = (ingredients: MealDBIngredient[]) => {
 
 export const getCategoryIcon = (category: string): string => {
   const icons: Record<string, string> = {
-    'Beef': '🥩',
-    'Chicken': '🐔',
-    'Dessert': '🍰',
-    'Lamb': '🐑',
-    'Miscellaneous': '🍽️',
-    'Pasta': '🍝',
-    'Pork': '🐷',
-    'Seafood': '🐟',
-    'Side': '🥗',
-    'Starter': '🥄',
-    'Vegan': '🌱',
-    'Vegetarian': '🥬',
-    'Breakfast': '🍳',
-    'Goat': '🐐',
-    'Turkey': '🦃',
+    'Beef': '🥩', 'Chicken': '🐔', 'Dessert': '🍰', 'Lamb': '🐑',
+    'Miscellaneous': '🍽️', 'Pasta': '🍝', 'Pork': '🐷', 'Seafood': '🐟',
+    'Side': '🥗', 'Starter': '🥄', 'Vegan': '🌱', 'Vegetarian': '🥬',
+    'Breakfast': '🍳', 'Goat': '🐐', 'Turkey': '🦃',
   }
-  
   return icons[category] || '🍽️'
 }
 
 export const getAreaFlag = (area: string): string => {
   const flags: Record<string, string> = {
-    'Italian': '🇮🇹',
-    'Chinese': '🇨🇳',
-    'Mexican': '🇲🇽',
-    'Indian': '🇮🇳',
-    'Japanese': '🇯🇵',
-    'French': '🇫🇷',
-    'British': '🇬🇧',
-    'American': '🇺🇸',
-    'Thai': '🇹🇭',
-    'Spanish': '🇪🇸',
-    'Greek': '🇬🇷',
-    'Turkish': '🇹🇷',
-    'Vietnamese': '🇻🇳',
-    'Moroccan': '🇲🇦',
-    'Russian': '🇷🇺',
-    'Polish': '🇵🇱',
-    'Portuguese': '🇵🇹',
-    'Jamaican': '🇯🇲',
-    'Malaysian': '🇲🇾',
-    'Tunisian': '🇹🇳',
-    'Croatian': '🇭🇷',
-    'Dutch': '🇳🇱',
-    'Egyptian': '🇪🇬',
-    'Canadian': '🇨🇦',
-    'Irish': '🇮🇪',
-    'Syrian': '🇸🇾',
-    'Kenyan': '🇰🇪',
-    'Ukrainian': '🇺🇦',
+    'Italian': '🇮🇹', 'Chinese': '🇨🇳', 'Mexican': '🇲🇽', 'Indian': '🇮🇳',
+    'Japanese': '🇯🇵', 'French': '🇫🇷', 'British': '🇬🇧', 'American': '🇺🇸',
+    'Thai': '🇹🇭', 'Spanish': '🇪🇸', 'Greek': '🇬🇷', 'Turkish': '🇹🇷',
+    'Vietnamese': '🇻🇳', 'Moroccan': '🇲🇦', 'Russian': '🇷🇺', 'Polish': '🇵🇱',
+    'Portuguese': '🇵🇹', 'Jamaican': '🇯🇲', 'Malaysian': '🇲🇾', 'Tunisian': '🇹🇳',
+    'Croatian': '🇭🇷', 'Dutch': '🇳🇱', 'Egyptian': '🇪🇬', 'Canadian': '🇨🇦',
+    'Irish': '🇮🇪', 'Syrian': '🇸🇾', 'Kenyan': '🇰🇪', 'Ukrainian': '🇺🇦',
     'Filipino': '🇵🇭',
   }
-  
-  return flags[area] || '🌍'
+  return flags[area] || '�'
 }

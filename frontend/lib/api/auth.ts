@@ -1,7 +1,10 @@
 // API functions for authentication and user management
 import { getSession } from "next-auth/react"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+// Use localhost for browser requests (Docker internal URLs don't work from browser)
+const API_BASE_URL = typeof window !== 'undefined' 
+  ? 'http://localhost:8000'  // Browser: use localhost
+  : process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'; // Server: use env var
 
 // Helper function to get auth headers
 async function getAuthHeaders() {

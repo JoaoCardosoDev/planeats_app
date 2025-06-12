@@ -11,6 +11,7 @@ import Link from "next/link"
 import { PlusCircle, Search, Edit, Trash2, Loader2 } from "lucide-react"
 import Image from "next/image"
 import { useState, useEffect } from "react"
+import { mealDbApi } from "@/lib/api/mealdb" 
 import { toast } from "sonner"
 import { pantryAPI, type PantryItemRead, type PantryFilters as PantryFiltersType } from "@/lib/api/pantry"
 import { AuthGuard } from "@/components/auth/AuthGuard"
@@ -45,10 +46,9 @@ function MeuFrigorificoContent() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [filters, setFilters] = useState<PantryFiltersType>({})
 
-  // Load pantry items from API
   useEffect(() => {
     loadPantryItems()
-  }, [filters]) // Reload when filters change
+  }, [filters]) 
 
   const loadPantryItems = async () => {
     try {
@@ -63,7 +63,6 @@ function MeuFrigorificoContent() {
     }
   }
 
-  // Get category from item name (simple categorization for now)
   const getItemCategory = (itemName: string): string => {
     const name = itemName.toLowerCase()
     if (name.includes('tomate') || name.includes('cebola') || name.includes('alface') || name.includes('cenoura')) return 'vegetais'
@@ -75,7 +74,6 @@ function MeuFrigorificoContent() {
     return 'outros'
   }
 
-  // Filter items by category and search
   const getItemsByCategory = (category: string) => {
     if (category === 'todos') return pantryItems
     return pantryItems.filter(item => getItemCategory(item.item_name) === category)
@@ -130,13 +128,8 @@ function MeuFrigorificoContent() {
 
   const getCategoryLabel = (category: string) => {
     const labels: { [key: string]: string } = {
-      vegetais: "Vegetal",
-      frutas: "Fruta",
-      proteinas: "Proteína",
-      graos: "Grãos",
-      laticinios: "Laticínio",
-      temperos: "Tempero",
-      outros: "Outros",
+      vegetais: "Vegetal", frutas: "Fruta", proteinas: "Proteína",
+      graos: "Grãos", laticinios: "Laticínio", temperos: "Tempero", outros: "Outros",
     }
     return labels[category] || category
   }
@@ -145,7 +138,6 @@ function MeuFrigorificoContent() {
     return getItemsByCategory(category).length
   }
 
-  // Check if item is expiring soon (within 7 days)
   const isExpiringSoon = (item: PantryItemRead): boolean => {
     if (!item.expiration_date) return false
     const expirationDate = new Date(item.expiration_date)
@@ -197,7 +189,6 @@ function MeuFrigorificoContent() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Filters Panel */}
           <div className="lg:col-span-1">
             <PantryFilters 
               filters={filters} 
@@ -206,7 +197,6 @@ function MeuFrigorificoContent() {
             />
           </div>
 
-          {/* Main Content */}
           <div className="lg:col-span-3">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="mb-4 bg-green-50 border border-green-200">
@@ -242,14 +232,14 @@ function MeuFrigorificoContent() {
                       <Card key={ingredient.id} className="overflow-hidden">
                         <CardContent className="p-0">
                           <div className="flex items-center">
-                            <div className="relative h-24 w-24 shrink-0">
+                            <div className="relative h-24 w-24 shrink-0 bg-gray-100 flex items-center justify-center rounded-l-md">
                               <Image
-                                src={`/images/ingredients/${ingredient.item_name.toLowerCase()}.jpg`}
+                                src={mealDbApi.public().getIngredientImageUrl(ingredient.item_name, 'small')}
                                 alt={ingredient.item_name}
                                 fill
-                                className="object-cover"
+                                className="object-contain p-1"
                                 onError={(e) => {
-                                  e.currentTarget.src = "/placeholder.svg?height=96&width=96"
+                                  (e.currentTarget as HTMLImageElement).src = `/placeholder.svg?text=${encodeURIComponent(ingredient.item_name.substring(0,3))}&height=64&width=64`;
                                 }}
                               />
                             </div>
@@ -278,7 +268,6 @@ function MeuFrigorificoContent() {
                                   <Button variant="ghost" size="icon" onClick={() => handleEdit(ingredient)}>
                                     <Edit className="h-4 w-4" />
                                   </Button>
-
                                   <AlertDialog>
                                     <AlertDialogTrigger asChild>
                                       <Button variant="ghost" size="icon">
@@ -318,7 +307,6 @@ function MeuFrigorificoContent() {
           </div>
         </div>
 
-        {/* Dialog de Edição */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
@@ -330,66 +318,24 @@ function MeuFrigorificoContent() {
                 <div className="grid gap-4 py-4">
                   <div className="space-y-2">
                     <Label htmlFor="edit-name">Nome</Label>
-                    <Input
-                      id="edit-name"
-                      value={editingIngredient.item_name}
-                      onChange={(e) =>
-                        setEditingIngredient({
-                          ...editingIngredient,
-                          item_name: e.target.value,
-                        })
-                      }
-                    />
+                    <Input id="edit-name" value={editingIngredient.item_name} onChange={(e) => setEditingIngredient({ ...editingIngredient, item_name: e.target.value })} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="edit-quantity">Quantidade</Label>
-                    <Input
-                      id="edit-quantity"
-                      type="number"
-                      value={editingIngredient.quantity}
-                      onChange={(e) =>
-                        setEditingIngredient({
-                          ...editingIngredient,
-                          quantity: parseFloat(e.target.value) || 0,
-                        })
-                      }
-                    />
+                    <Input id="edit-quantity" type="number" value={editingIngredient.quantity} onChange={(e) => setEditingIngredient({ ...editingIngredient, quantity: parseFloat(e.target.value) || 0 })} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="edit-unit">Unidade</Label>
-                    <Input
-                      id="edit-unit"
-                      value={editingIngredient.unit}
-                      onChange={(e) =>
-                        setEditingIngredient({
-                          ...editingIngredient,
-                          unit: e.target.value,
-                        })
-                      }
-                    />
+                    <Input id="edit-unit" value={editingIngredient.unit} onChange={(e) => setEditingIngredient({ ...editingIngredient, unit: e.target.value })} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="edit-expiry">Data de Validade</Label>
-                    <Input
-                      id="edit-expiry"
-                      type="date"
-                      value={editingIngredient.expiration_date ? editingIngredient.expiration_date.split("T")[0] : ""}
-                      onChange={(e) =>
-                        setEditingIngredient({
-                          ...editingIngredient,
-                          expiration_date: e.target.value || undefined,
-                        })
-                      }
-                    />
+                    <Input id="edit-expiry" type="date" value={editingIngredient.expiration_date ? editingIngredient.expiration_date.split("T")[0] : ""} onChange={(e) => setEditingIngredient({ ...editingIngredient, expiration_date: e.target.value || undefined })} />
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-                    Cancelar
-                  </Button>
-                  <Button type="submit" className="bg-green-600 hover:bg-green-700">
-                    Salvar alterações
-                  </Button>
+                  <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}> Cancelar </Button>
+                  <Button type="submit" className="bg-green-600 hover:bg-green-700"> Salvar alterações </Button>
                 </DialogFooter>
               </form>
             )}

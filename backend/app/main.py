@@ -32,10 +32,10 @@ app.redirect_slashes = False
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for development
+    allow_origins=["http://localhost:3000"],  # Explicitly allow frontend origin
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"], # Be explicit with methods
+    allow_headers=["*"], # Allow all headers, or list specific ones like Content-Type, Authorization
 )
 
 # Include API routes

@@ -67,14 +67,14 @@ def update_user_preferences(
                     detail=f"Invalid dietary restriction: {restriction}. Valid options: {valid_restrictions}"
                 )
     
-    # Validate cuisine types
-    if preferences_in.preferred_cuisines:
+    # Validate cuisine types (now using cuisine_preferences as the primary field)
+    if preferences_in.cuisine_preferences: # Changed from preferred_cuisines
         valid_cuisines = [cuisine.value for cuisine in CuisineType]
-        for cuisine in preferences_in.preferred_cuisines:
+        for cuisine in preferences_in.cuisine_preferences: # Changed from preferred_cuisines
             if cuisine not in valid_cuisines:
                 raise HTTPException(
                     status_code=400, 
-                    detail=f"Invalid cuisine type: {cuisine}. Valid options: {valid_cuisines}"
+                    detail=f"Invalid cuisine_preferences type: {cuisine}. Valid options: {valid_cuisines}" # Changed message
                 )
     
     # Validate difficulty level
@@ -130,13 +130,14 @@ def create_user_preferences(
                     detail=f"Invalid dietary restriction: {restriction}. Valid options: {valid_restrictions}"
                 )
     
-    if preferences_in.preferred_cuisines:
+    # Validate cuisine_preferences (field name changed in UserPreferenceCreate via UserPreferenceBase)
+    if preferences_in.cuisine_preferences:
         valid_cuisines = [cuisine.value for cuisine in CuisineType]
-        for cuisine in preferences_in.preferred_cuisines:
+        for cuisine in preferences_in.cuisine_preferences: # Changed from preferred_cuisines
             if cuisine not in valid_cuisines:
                 raise HTTPException(
                     status_code=400, 
-                    detail=f"Invalid cuisine type: {cuisine}. Valid options: {valid_cuisines}"
+                    detail=f"Invalid cuisine_preferences type: {cuisine}. Valid options: {valid_cuisines}" # Changed message
                 )
     
     if preferences_in.preferred_difficulty:

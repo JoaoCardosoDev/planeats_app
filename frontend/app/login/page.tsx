@@ -125,25 +125,7 @@ function LoginForm() {
               />
             </div>
 
-            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-              <p className="text-sm text-blue-800 mb-2">
-                <strong>Para testar:</strong>
-              </p>
-              <p className="text-xs text-blue-600 mb-2">
-                Email: admin@planeats.com<br />
-                Senha: admin123
-              </p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleTestLogin}
-                disabled={isLoading}
-                className="w-full"
-              >
-                Usar credenciais de teste
-              </Button>
-            </div>
+            {/* "Para testar" section removed */}
           </CardContent>
 
           <CardFooter className="flex flex-col space-y-4">

@@ -1,6 +1,7 @@
 from sqlmodel import Field, SQLModel, Column, JSON
 from typing import Optional, List, Dict, Any
 from enum import Enum
+from pydantic import model_validator # Changed back to model_validator
 
 class DietaryRestriction(str, Enum):
     VEGETARIAN = "vegetarian"
@@ -34,8 +35,8 @@ class UserPreferenceBase(SQLModel):
     # Enhanced dietary restrictions with specific enums
     dietary_restrictions: Optional[List[str]] = Field(default=None, sa_column=Column(JSON))
     
-    # Preferred cuisine types (for US5.1 compatibility, also keeping as cuisine_preferences)
-    preferred_cuisines: Optional[List[str]] = Field(default=None, sa_column=Column(JSON))
+    # Preferred cuisine types. cuisine_preferences is the DB-backed field.
+    # This should be a column in the database.
     cuisine_preferences: Optional[List[str]] = Field(default=None, sa_column=Column(JSON))
     
     # US5.1 specific fields
@@ -70,12 +71,21 @@ class UserPreferenceCreate(UserPreferenceBase):
 class UserPreferenceRead(UserPreferenceBase):
     id: int
     user_id: int
+    preferred_cuisines: Optional[List[str]] = None  # Field for API response
+
+    @model_validator(mode="after")
+    def _populate_preferred_cuisines_for_read(self) -> 'UserPreferenceRead': # Changed to instance method 'self'
+        if self.cuisine_preferences is not None:
+            self.preferred_cuisines = self.cuisine_preferences
+        # If cuisine_preferences is None, preferred_cuisines remains None (its default)
+        return self
 
 class UserPreferenceUpdate(SQLModel):
     daily_calorie_goal: Optional[int] = None
     dietary_restrictions: Optional[List[str]] = None
-    preferred_cuisines: Optional[List[str]] = None
-    cuisine_preferences: Optional[List[str]] = None
+    # preferred_cuisines is an alias for cuisine_preferences, which is the target field
+    # The frontend sends preferred_cuisines, so we accept it via alias.
+    cuisine_preferences: Optional[List[str]] = Field(default=None, alias="preferred_cuisines")
     disliked_ingredients: Optional[List[str]] = None
     notification_preferences: Optional[Dict[str, Any]] = None
     preferred_difficulty: Optional[str] = None

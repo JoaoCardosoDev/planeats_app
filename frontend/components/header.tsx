@@ -193,8 +193,10 @@ export default function Header() {
                   }`}
                 >
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={session?.user?.image || "/placeholder.svg?height=32&width=32"} alt="Foto de perfil" />
-                    <AvatarFallback>{session?.user?.name?.charAt(0) || session?.user?.email?.charAt(0) || "U"}</AvatarFallback>
+                    <AvatarImage src={session?.user?.image || undefined} alt="Foto de perfil" />
+                    <AvatarFallback>
+                      <User className="h-4 w-4 text-green-600" />
+                    </AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
@@ -205,12 +207,7 @@ export default function Header() {
                     <span>Perfil</span>
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/configuracoes" className="cursor-pointer flex items-center">
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Configurações</span>
-                  </Link>
-                </DropdownMenuItem>
+                {/* Configurações link removed */}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
                   <LogOut className="mr-2 h-4 w-4" />

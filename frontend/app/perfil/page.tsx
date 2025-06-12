@@ -127,16 +127,21 @@ export default function Perfil() {
       setUpdating(true)
       const updated = await updateUserPreferences(editedPreferences)
       
-      if (updated) {
-        setUserPreferences(updated)
-        setIsEditingPreferences(false)
-        toast.success("Preferências atualizadas com sucesso!")
+      if (updatedByPut) {
+        // Instead of directly using updatedByPut, let's re-fetch to ensure data consistency
+        const freshPreferences = await getUserPreferences(); // Fresh GET request
+        setUserPreferences(freshPreferences); // Update display state with fresh data from GET
+        if (freshPreferences) {
+          setEditedPreferences(freshPreferences); // Reset edit form state to fresh data
+        }
+        setIsEditingPreferences(false);
+        toast.success("Preferências atualizadas com sucesso!");
       } else {
-        toast.error("Erro ao atualizar preferências")
+        toast.error("Erro ao atualizar preferências (resposta da atualização inválida)");
       }
     } catch (error) {
-      console.error("Error updating preferences:", error)
-      toast.error("Erro ao atualizar preferências")
+      console.error("Error updating preferences:", error);
+      toast.error("Erro ao atualizar preferências (exceção ao salvar)");
     } finally {
       setUpdating(false)
     }
@@ -164,12 +169,21 @@ export default function Perfil() {
   }
 
   const addCuisine = () => {
-    if (!newCuisine || !editedPreferences.preferred_cuisines) return
+    if (!newCuisine || !editedPreferences.preferred_cuisines) {
+      // Initialize preferred_cuisines if it's undefined (e.g., on first edit of a new preference set)
+      if (!editedPreferences.preferred_cuisines) {
+        setEditedPreferences(prev => ({ ...prev, preferred_cuisines: [] }));
+      }
+      return;
+    }
     
-    if (!editedPreferences.preferred_cuisines.includes(newCuisine)) {
+    // Ensure editedPreferences.preferred_cuisines is treated as an array even if it might be null/undefined initially
+    const currentCuisines = Array.isArray(editedPreferences.preferred_cuisines) ? editedPreferences.preferred_cuisines : [];
+
+    if (!currentCuisines.includes(newCuisine)) {
       setEditedPreferences({
         ...editedPreferences,
-        preferred_cuisines: [...editedPreferences.preferred_cuisines, newCuisine]
+        preferred_cuisines: [...currentCuisines, newCuisine]
       })
       setNewCuisine("")
     }

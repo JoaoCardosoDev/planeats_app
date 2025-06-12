@@ -14,87 +14,100 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Menu, Settings, User, LogOut } from "lucide-react"
 import Image from "next/image"
-import { useSession, signOut } from "next-auth/react"
+import { usePathname, useRouter } from "next/navigation"
 import { toast } from "sonner"
+import { useSession, signOut } from "next-auth/react"
 
 export default function Header() {
+  const [isScrolled, setIsScrolled] = useState(false)
+  const pathname = usePathname()
+  const router = useRouter()
   const { data: session, status } = useSession()
+  const isLoggedIn = !!session
+
+
+  // Detectar scroll para mudar o estilo da navbar
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY
+      setIsScrolled(scrollPosition > 100) // Aumentei para 100px para dar mais espaço
+    }
+
+    window.addEventListener("scroll", handleScroll)
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [])
 
   const handleLogout = async () => {
     await signOut({ callbackUrl: "/" })
     toast.success("Logout realizado com sucesso!")
   }
 
-  // Show a loading state or minimal header if session status is loading
-  if (status === "loading") {
-    return (
-      <header className="sticky top-0 z-50 w-full border-b border-green-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 shadow-sm">
-        <div className="container flex h-16 items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <Image src="/placeholder-logo.png" alt="PlanEats Logo" width={32} height={32} className="rounded-full" />
-            <span className="text-xl font-bold text-green-700">
-              Plan<span className="text-amber-500">Eats</span>
-            </span>
-          </Link>
-          {/* Placeholder for auth buttons to prevent layout shift */}
-          <div className="flex items-center gap-2">
-            <div className="h-9 w-20 rounded-md bg-gray-200 animate-pulse"></div>
-            <div className="h-9 w-24 rounded-md bg-gray-200 animate-pulse"></div>
-          </div>
-        </div>
-      </header>
-    );
-  }
+  // Determinar se estamos na página inicial
+  const isHomePage = pathname === "/"
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-green-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 shadow-sm">
+    <header
+      className={`fixed top-0 z-50 w-full transition-all duration-700 ease-out ${
+        isHomePage
+          ? isScrolled
+            ? "bg-white/95 backdrop-blur-md shadow-lg border-b border-white/20"
+            : "bg-transparent"
+          : "bg-white/95 backdrop-blur-md border-b shadow-sm"
+      }`}
+    >
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-2">
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden hover:bg-green-50">
-                <Menu className="h-5 w-5 text-green-700" />
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`md:hidden transition-colors duration-500 ${
+                  isHomePage && !isScrolled ? "text-white hover:bg-white/20" : "hover:bg-gray-100"
+                }`}
+              >
+                <Menu className="h-5 w-5" />
                 <span className="sr-only">Abrir menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-[300px] sm:w-[400px] border-green-200">
+            <SheetContent side="left" className="w-[300px] sm:w-[400px]">
               <nav className="flex flex-col gap-4 mt-8">
-                {session?.user ? (
+                {isLoggedIn ? (
                   <>
-                  <Link
+                    <Link
                       href="/meu-frigorifico"
-                      className="text-lg font-medium text-green-700 hover:text-green-600 transition-colors py-2 px-3 rounded-md hover:bg-green-50"
+                      className="text-lg font-medium hover:text-green-600 transition-colors"
                     >
                       Meu Frigorífico
                     </Link>
                     <Link
                       href="/adicionar-itens"
-                      className="text-lg font-medium text-green-700 hover:text-green-600 transition-colors py-2 px-3 rounded-md hover:bg-green-50"
+                      className="text-lg font-medium hover:text-green-600 transition-colors"
                     >
                       Adicionar Itens
                     </Link>
                     <Link
                       href="/receitas-sugeridas"
-                      className="text-lg font-medium text-green-700 hover:text-green-600 transition-colors py-2 px-3 rounded-md hover:bg-green-50"
+                      className="text-lg font-medium hover:text-green-600 transition-colors"
                     >
                       Receitas Sugeridas
                     </Link>
                     <Link
                       href="/minhas-receitas"
-                      className="text-lg font-medium text-green-700 hover:text-green-600 transition-colors py-2 px-3 rounded-md hover:bg-green-50"
+                      className="text-lg font-medium hover:text-green-600 transition-colors"
                     >
                       Minhas Receitas
                     </Link>
-                    <Link href="/explorar" className="text-lg font-medium text-green-700 hover:text-green-600 transition-colors py-2 px-3 rounded-md hover:bg-green-50">
+                    <Link href="/explorar" className="text-lg font-medium hover:text-green-600 transition-colors">
                       Explorar
                     </Link>
                   </>
                 ) : (
                   <>
-                    <Link href="/login" className="text-lg font-medium text-green-700 hover:text-green-600 transition-colors py-2 px-3 rounded-md hover:bg-green-50">
+                    <Link href="/login" className="text-lg font-medium hover:text-green-600 transition-colors">
                       Entrar
                     </Link>
-                    <Link href="/cadastro" className="text-lg font-medium text-green-700 hover:text-green-600 transition-colors py-2 px-3 rounded-md hover:bg-green-50">
+                    <Link href="/cadastro" className="text-lg font-medium hover:text-green-600 transition-colors">
                       Cadastrar
                     </Link>
                   </>
@@ -102,73 +115,130 @@ export default function Header() {
               </nav>
             </SheetContent>
           </Sheet>
-          <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <Image src="/placeholder-logo.png" alt="PlanEats Logo" width={32} height={32} className="rounded-full" />
-            <span className="text-xl font-bold text-green-700">
-              Plan<span className="text-amber-500">Eats</span>
-            </span>
+          <Link href="/" className="flex items-center group">
+            <Image
+              src="/images/Logo.png"
+              alt="PlanEats Logo"
+              width={50}
+              height={50}
+              className="rounded-full transition-transform duration-300 group-hover:scale-110"
+            />
+            <span
+                className={`text-xl font-bold transition-colors duration-500 ${
+                  isHomePage && !isScrolled ? "text-white" : "text-green-600"
+                }`}
+                style={{
+                  height: "20px",
+                }}
+              >
+                  Plan<span className="text-amber-500">Eats</span>
+                </span>
           </Link>
         </div>
         <nav className="hidden md:flex items-center gap-6">
-          {session?.user ? (
+          {isLoggedIn ? (
             <>
-              <Link href="/meu-frigorifico" className="text-sm font-medium text-green-700 hover:text-green-600 transition-colors py-2 px-3 rounded-md hover:bg-green-50">
+              <Link
+                href="/meu-frigorifico"
+                className={`text-sm font-medium transition-colors duration-500 ${
+                  isHomePage && !isScrolled ? "text-white/90 hover:text-white" : "text-gray-700 hover:text-green-600"
+                }`}
+              >
                 Meu Frigorífico
               </Link>
-              <Link href="/adicionar-itens" className="text-sm font-medium text-green-700 hover:text-green-600 transition-colors py-2 px-3 rounded-md hover:bg-green-50">
+              <Link
+                href="/adicionar-itens"
+                className={`text-sm font-medium transition-colors duration-500 ${
+                  isHomePage && !isScrolled ? "text-white/90 hover:text-white" : "text-gray-700 hover:text-green-600"
+                }`}
+              >
                 Adicionar Itens
               </Link>
-              <Link href="/receitas-sugeridas" className="text-sm font-medium text-green-700 hover:text-green-600 transition-colors py-2 px-3 rounded-md hover:bg-green-50">
+              <Link
+                href="/receitas-sugeridas"
+                className={`text-sm font-medium transition-colors duration-500 ${
+                  isHomePage && !isScrolled ? "text-white/90 hover:text-white" : "text-gray-700 hover:text-green-600"
+                }`}
+              >
                 Receitas Sugeridas
               </Link>
-               <Link href="/minhas-receitas" className="text-sm font-medium text-green-700 hover:text-green-600 transition-colors py-2 px-3 rounded-md hover:bg-green-50">
+              <Link
+                href="/minhas-receitas"
+                className={`text-sm font-medium transition-colors duration-500 ${
+                  isHomePage && !isScrolled ? "text-white/90 hover:text-white" : "text-gray-700 hover:text-green-600"
+                }`}
+              >
                 Minhas Receitas
               </Link>
-              <Link href="/explorar" className="text-sm font-medium text-green-700 hover:text-green-600 transition-colors py-2 px-3 rounded-md hover:bg-green-50">
+              <Link
+                href="/explorar"
+                className={`text-sm font-medium transition-colors duration-500 ${
+                  isHomePage && !isScrolled ? "text-white/90 hover:text-white" : "text-gray-700 hover:text-green-600"
+                }`}
+              >
                 Explorar
               </Link>
             </>
           ) : null}
         </nav>
         <div className="flex items-center gap-4">
-          {session?.user ? (
+          {isLoggedIn ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full hover:bg-green-50">
-                  <Avatar className="h-8 w-8 border-2 border-green-200">
-                    <AvatarImage src={session.user.image || "/placeholder.svg?height=32&width=32"} alt="Foto de perfil" />
-                    <AvatarFallback className="bg-green-100 text-green-700 font-semibold">
-                      {session.user.name?.charAt(0)?.toUpperCase() || "U"}
-                    </AvatarFallback>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={`rounded-full transition-colors duration-500 ${
+                    isHomePage && !isScrolled ? "hover:bg-white/20" : "hover:bg-gray-100"
+                  }`}
+                >
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={session?.user?.image || "/placeholder.svg?height=32&width=32"} alt="Foto de perfil" />
+                    <AvatarFallback>{session?.user?.name?.charAt(0) || session?.user?.email?.charAt(0) || "U"}</AvatarFallback>
                   </Avatar>
-                  </Button>
+                </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="border-green-200">
+              <DropdownMenuContent align="end">
                 <DropdownMenuItem asChild>
-                  <Link href="/perfil" className="cursor-pointer flex items-center text-green-700 hover:text-green-600 hover:bg-green-50">
+                  <Link href="/perfil" className="cursor-pointer flex items-center">
                     <User className="mr-2 h-4 w-4" />
                     <span>Perfil</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/configuracoes" className="cursor-pointer flex items-center text-green-700 hover:text-green-600 hover:bg-green-50">
+                  <Link href="/configuracoes" className="cursor-pointer flex items-center">
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Configurações</span>
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-green-200" />
-                <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50">
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Sair</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-              ) : (
+          ) : (
             <div className="flex items-center gap-2">
-              <Button variant="ghost" asChild className="text-green-700 hover:text-green-600 hover:bg-green-50">
+              <Button
+                variant="ghost"
+                asChild
+                className={`transition-colors duration-500 ${
+                  isHomePage && !isScrolled
+                    ? "text-white/90 hover:text-white hover:bg-white/20"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
+              >
                 <Link href="/login">Entrar</Link>
               </Button>
-              <Button asChild className="bg-green-600 hover:bg-green-700 text-white shadow-md">
+              <Button
+                asChild
+                className={`transition-all duration-500 ${
+                  isHomePage && !isScrolled
+                    ? "bg-green-600/90 hover:bg-green-700 text-white border border-green-500/30 backdrop-blur-sm"
+                    : "bg-green-600 hover:bg-green-700 text-white"
+                }`}
+              >
                 <Link href="/cadastro">Cadastrar</Link>
               </Button>
             </div>

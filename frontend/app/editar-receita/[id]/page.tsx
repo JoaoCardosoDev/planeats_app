@@ -8,9 +8,10 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, Plus, X, Upload } from "lucide-react"
+import Image from "next/image"
 import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
-import { useAppStore } from "@/lib/store"
+import { useAppStore, type Recipe } from "@/lib/store"
 import { toast } from "sonner"
 
 export default function EditarReceita() {
@@ -19,7 +20,7 @@ export default function EditarReceita() {
   const router = useRouter()
 
   const [isLoading, setIsLoading] = useState(false)
-  const [recipe, setRecipe] = useState<any>(null)
+  const [recipe, setRecipe] = useState<Recipe | null>(null)
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -28,23 +29,23 @@ export default function EditarReceita() {
     category: "",
     image: "",
   })
-  const [ingredients, setIngredients] = useState<string[]>([])
+  const [ingredients, setIngredients] = useState<Array<{name: string, quantity: string, unit: string}>>([])
   const [newIngredient, setNewIngredient] = useState("")
   const [instructions, setInstructions] = useState<string[]>([])
   const [newInstruction, setNewInstruction] = useState("")
 
   useEffect(() => {
     // Buscar a receita pelo ID
-    const foundRecipe = recipes.find((r) => r.id === id)
+    const foundRecipe = recipes.find(r => r.id === id)
     if (foundRecipe) {
       setRecipe(foundRecipe)
       setFormData({
-        title: foundRecipe.title,
+        title: foundRecipe.name,
         description: foundRecipe.description,
-        time: foundRecipe.time,
+        time: foundRecipe.prepTime.toString(),
         difficulty: foundRecipe.difficulty,
         category: foundRecipe.category,
-        image: foundRecipe.image,
+        image: foundRecipe.image || "",
       })
       setIngredients([...foundRecipe.ingredients])
       setInstructions([...foundRecipe.instructions])
@@ -56,7 +57,13 @@ export default function EditarReceita() {
 
   const addIngredient = () => {
     if (newIngredient.trim()) {
-      setIngredients([...ingredients, newIngredient.trim()])
+      // Parse o ingrediente para extrair quantidade, unidade e nome
+      const parts = newIngredient.trim().split(' ')
+      const quantity = parts[0] || '1'
+      const unit = parts[1] || 'unidade'
+      const name = parts.slice(2).join(' ') || newIngredient.trim()
+      
+      setIngredients([...ingredients, { name, quantity, unit }])
       setNewIngredient("")
     }
   }
@@ -98,19 +105,24 @@ export default function EditarReceita() {
 
     try {
       updateRecipe(id as string, {
-        title: formData.title,
+        name: formData.title,
         description: formData.description,
         image: formData.image,
-        time: formData.time,
-        difficulty: formData.difficulty,
+        prepTime: parseInt(formData.time) || 0,
+        cookTime: 0,
+        servings: 1,
+        difficulty: formData.difficulty as 'Fácil' | 'Médio' | 'Difícil',
         category: formData.category,
         ingredients,
         instructions,
+        tags: [],
+        createdAt: new Date().toISOString(),
+        isFavorite: false,
       })
 
       toast.success("Receita atualizada com sucesso!")
       router.push("/minhas-receitas")
-    } catch (error) {
+    } catch {
       toast.error("Erro ao atualizar receita")
     } finally {
       setIsLoading(false)
@@ -240,7 +252,7 @@ export default function EditarReceita() {
                   <div className="space-y-2">
                     {ingredients.map((ingredient, index) => (
                       <div key={index} className="flex items-center justify-between p-2 bg-muted rounded">
-                        <span>{ingredient}</span>
+                        <span>{ingredient.quantity} {ingredient.unit} de {ingredient.name}</span>
                         <Button type="button" variant="ghost" size="sm" onClick={() => removeIngredient(index)}>
                           <X className="h-4 w-4" />
                         </Button>
@@ -296,10 +308,11 @@ export default function EditarReceita() {
                   <div className="space-y-4">
                     {formData.image && (
                       <div className="relative h-32 w-full rounded-lg overflow-hidden">
-                        <img
+                        <Image
                           src={formData.image || "/placeholder.svg"}
                           alt="Preview"
-                          className="w-full h-full object-cover"
+                          fill
+                          className="object-cover"
                         />
                       </div>
                     )}

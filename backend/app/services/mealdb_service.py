@@ -3,6 +3,7 @@ import logging
 from typing import List, Dict, Optional, Any
 from pydantic import BaseModel
 from datetime import datetime
+import asyncio # Added for sleep in retry logic
 
 logger = logging.getLogger(__name__)
 
@@ -141,23 +142,39 @@ class MealDBService:
             logger.error(f"Unexpected error getting meal by ID '{meal_id}': {e}")
             return None
     
-    async def get_random_meal(self) -> Optional[MealDBMeal]:
-        """Get a random meal"""
-        try:
-            response = await self.client.get(f"{self.BASE_URL}/random.php")
-            response.raise_for_status()
-            data = response.json()
+    async def get_random_meal(self, retries: int = 3, delay_seconds: float = 0.5) -> Optional[MealDBMeal]:
+        """Get a random meal, with retries."""
+        last_exception: Optional[Exception] = None
+        for attempt in range(retries):
+            try:
+                logger.debug(f"Attempt {attempt + 1}/{retries} to get random meal.")
+                response = await self.client.get(f"{self.BASE_URL}/random.php")
+                response.raise_for_status() # Raises HTTPStatusError for 4xx/5xx responses
+                data = response.json()
+                
+                if data.get("meals") and data["meals"]:
+                    return self._parse_meal(data["meals"][0])
+                else:
+                    # This case (e.g., 200 OK but "meals": null or "meals": []) is a valid failure to find a meal.
+                    logger.warn(f"Attempt {attempt + 1}/{retries}: No meal data in successful random meal response from TheMealDB.")
+                    last_exception = ValueError("No meal data in TheMealDB response") # Store this as a potential final error
             
-            if not data.get("meals") or not data["meals"]:
-                return None
-            
-            return self._parse_meal(data["meals"][0])
-        except httpx.RequestError as e:
-            logger.error(f"Error getting random meal: {e}")
-            return None
-        except Exception as e:
-            logger.error(f"Unexpected error getting random meal: {e}")
-            return None
+            except httpx.HTTPStatusError as e: # Specific HTTP errors like 404, 500 from MealDB
+                logger.warn(f"Attempt {attempt + 1}/{retries}: HTTPStatusError getting random meal from TheMealDB: {e.response.status_code} - {e}")
+                last_exception = e
+            except httpx.RequestError as e: # Network errors, timeouts
+                logger.warn(f"Attempt {attempt + 1}/{retries}: RequestError getting random meal from TheMealDB: {e}")
+                last_exception = e
+            except Exception as e: # Other errors like JSON parsing
+                logger.warn(f"Attempt {attempt + 1}/{retries}: Unexpected error processing random meal from TheMealDB: {e}")
+                last_exception = e
+
+            if attempt < retries - 1:
+                logger.debug(f"Waiting {delay_seconds}s before next attempt.")
+                await asyncio.sleep(delay_seconds) # Wait before retrying
+        
+        logger.error(f"Failed to get random meal after {retries} attempts. Last error: {last_exception}")
+        return None # Return None if all retries fail
     
     async def get_categories(self) -> List[MealDBCategory]:
         """Get all meal categories"""

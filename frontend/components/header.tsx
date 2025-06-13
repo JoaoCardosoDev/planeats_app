@@ -122,6 +122,7 @@ export default function Header() {
               width={50}
               height={50}
               className="rounded-full transition-transform duration-300 group-hover:scale-110"
+              style={{ height: 'auto' }} // Maintain aspect ratio
             />
             <span
                 className={`text-xl font-bold transition-colors duration-500 ${

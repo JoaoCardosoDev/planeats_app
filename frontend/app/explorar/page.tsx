@@ -202,6 +202,10 @@ function MealDBExplorer() {
         action: {
           label: "Ver Minhas Receitas",
           onClick: () => window.location.href = '/minhas-receitas'
+        },
+        actionButtonStyle: {
+          backgroundColor: "#16A34A", // Tailwind green-600
+          color: "white"
         }
       })
     } catch (err: any) {

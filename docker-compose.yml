@@ -13,7 +13,6 @@ services:
       - NEXT_PUBLIC_API_URL=http://backend:8000
       - NEXTAUTH_URL=${NEXTAUTH_URL}
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
-      # - NODE_ENV=development # Uncomment if needed for specific dev setup
     depends_on:
       - backend
     restart: unless-stopped
@@ -40,7 +39,6 @@ services:
     restart: unless-stopped
     networks:
       - planeats_network
-    # Override Dockerfile CMD to include test data creation for development
     command: ["./startup.sh"]
 
   db:

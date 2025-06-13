@@ -98,7 +98,7 @@ You are a professional chef AI assistant. Create a detailed recipe using ONLY th
 Please respond with a JSON object in exactly this format:
 {{
     "recipe_name": "Name of the recipe",
-    "instructions": "Step-by-step cooking instructions",
+    "instructions": "Step-by-step cooking instructions. Each step should be clearly separated, preferably by a newline character (\\n). For example: '1. Do this.\\n2. Do that.\\n3. Then do another thing.'",
     "estimated_calories": 450,
     "preparation_time_minutes": 30,
     "ingredients": [
@@ -113,11 +113,12 @@ Please respond with a JSON object in exactly this format:
 Requirements:
 1. Use ONLY ingredients from the provided pantry items
 2. Be specific about quantities and units
-3. Provide clear, step-by-step instructions
+3. Provide clear, step-by-step instructions. Ensure instructions are well-formatted with newlines (e.g., '\\n') between distinct steps for readability.
 4. Estimate realistic calories and preparation time
 5. Make the recipe practical and delicious
 6. Respect all dietary restrictions and preferences
-7. Respond ONLY with valid JSON, no additional text
+7. All text in the response, including recipe_name and instructions, MUST be in European Portuguese (Português de Portugal).
+8. Respond ONLY with valid JSON, no additional text
 """
         
         return prompt.strip()

@@ -13,6 +13,7 @@ export interface PantryItemCreate {
   expiration_date?: string; // ISO date string (YYYY-MM-DD)
   purchase_date?: string; // ISO date string (YYYY-MM-DD)
   calories_per_unit?: number;
+  image_url?: string;
 }
 
 export interface PantryItemRead {
@@ -23,6 +24,7 @@ export interface PantryItemRead {
   expiration_date?: string;
   purchase_date?: string;
   calories_per_unit?: number;
+  image_url?: string;
   user_id: number;
   added_at: string; // ISO datetime string
 }
@@ -34,6 +36,7 @@ export interface PantryItemUpdate {
   expiration_date?: string;
   purchase_date?: string;
   calories_per_unit?: number;
+  image_url?: string;
 }
 
 export interface PantryListResponse {
@@ -66,8 +69,8 @@ class PantryAPI {
   async createPantryItem(item: PantryItemCreate): Promise<PantryItemRead> {
     const url = `${API_BASE_URL}/api/v1/pantry/items`;
     
-    console.log('Creating pantry item:', item);
-    console.log('Making request to:', url);
+    // console.log('Creating pantry item:', item);
+    // console.log('Making request to:', url);
     
     const response = await fetch(url, {
       method: 'POST',
@@ -77,12 +80,12 @@ class PantryAPI {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('API Error Response:', errorText);
+      // console.error('API Error Response:', errorText);
       throw new Error(`Failed to create pantry item: ${response.status} ${response.statusText}. ${errorText}`);
     }
 
     const data = await response.json();
-    console.log('API Response:', data);
+    // console.log('API Response:', data);
     return data;
   }
 
@@ -109,7 +112,7 @@ class PantryAPI {
 
     const url = `${API_BASE_URL}/api/v1/pantry/items?${params.toString()}`;
     
-    console.log('Getting pantry items from:', url);
+    // console.log('Getting pantry items from:', url);
     
     const response = await fetch(url, {
       method: 'GET',
@@ -118,12 +121,12 @@ class PantryAPI {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('API Error Response:', errorText);
+      // console.error('API Error Response:', errorText);
       throw new Error(`Failed to fetch pantry items: ${response.status} ${response.statusText}. ${errorText}`);
     }
 
     const data = await response.json();
-    console.log('API Response:', data);
+    // console.log('API Response:', data);
     return data;
   }
 
@@ -135,7 +138,7 @@ class PantryAPI {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('API Error Response:', errorText);
+      // console.error('API Error Response:', errorText);
       throw new Error(`Failed to fetch pantry item: ${response.status} ${response.statusText}. ${errorText}`);
     }
 
@@ -152,7 +155,7 @@ class PantryAPI {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('API Error Response:', errorText);
+      // console.error('API Error Response:', errorText);
       throw new Error(`Failed to update pantry item: ${response.status} ${response.statusText}. ${errorText}`);
     }
 
@@ -168,7 +171,7 @@ class PantryAPI {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('API Error Response:', errorText);
+      // console.error('API Error Response:', errorText);
       throw new Error(`Failed to delete pantry item: ${response.status} ${response.statusText}. ${errorText}`);
     }
   }

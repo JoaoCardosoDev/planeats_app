@@ -33,7 +33,8 @@ export interface UserPreferences {
   id: number
   user_id: number
   dietary_restrictions: string[]
-  preferred_cuisines: string[]
+  cuisine_preferences: string[] // Changed from preferred_cuisines to match backend
+  disliked_ingredients: string[] | null // Added this line
   preferred_difficulty: string | null
   daily_calorie_goal: number | null
   max_prep_time_preference: number | null

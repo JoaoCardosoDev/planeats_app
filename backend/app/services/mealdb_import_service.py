@@ -1,6 +1,7 @@
 import logging
-from typing import Optional
+from typing import Optional, Tuple
 from sqlmodel import Session
+import re # For parsing measure strings
 
 from app.services.mealdb_service import MealDBService, MealDBMeal
 from app.models.recipe_models import RecipeCreate, RecipeIngredientCreate
@@ -18,7 +19,75 @@ class MealDBImportService:
     async def close(self):
         """Close the HTTP client"""
         await self.mealdb_service.close()
-    
+
+    def _parse_measure(self, measure_str: Optional[str]) -> Tuple[float, str]:
+        """
+        Parse a MealDB measure string into a quantity and unit.
+        Examples: "1 cup" -> (1.0, "cup"), "1/2 tsp" -> (0.5, "tsp"), 
+                  "Pinch" -> (1.0, "Pinch"), "600g" -> (600.0, "g")
+        """
+        if not measure_str or not measure_str.strip():
+            return 1.0, "unit"
+
+        original_measure_str = measure_str.strip()
+        
+        # Regex to find leading numbers, fractions, or number-unit combinations
+        # Handles: "1", "1.5", "1/2", "1 1/2", "1-2", "1kg", "1 kg"
+        # It will try to match a number (potentially with fraction or range)
+        # and then the rest as unit.
+        match = re.match(r"^\s*([\d\./\s-]+)\s*(.*)", original_measure_str)
+
+        quantity = 1.0
+        unit = original_measure_str # Default unit is the whole string if no parseable quantity
+
+        if match:
+            quantity_part_str = match.group(1).strip()
+            unit_part_str = match.group(2).strip()
+
+            # Try to evaluate quantity_part_str
+            try:
+                if "/" in quantity_part_str and " " in quantity_part_str: # e.g. "1 1/2"
+                    whole, frac = quantity_part_str.split(" ", 1)
+                    num, den = map(float, frac.split("/"))
+                    if den == 0: raise ValueError("Division by zero in fraction")
+                    quantity = float(whole) + (num / den)
+                elif "/" in quantity_part_str: # e.g. "1/2"
+                    num, den = map(float, quantity_part_str.split("/"))
+                    if den == 0: raise ValueError("Division by zero in fraction")
+                    quantity = num / den
+                elif "-" in quantity_part_str: # e.g. "1-2", take the first number
+                    quantity = float(quantity_part_str.split("-")[0].strip())
+                else: # e.g. "1", "1.5"
+                    quantity = float(quantity_part_str)
+                
+                # If quantity was successfully parsed, the rest is the unit
+                unit = unit_part_str if unit_part_str else "unit" # Default to "unit" if unit_part_str is empty
+                
+                # Special case: if unit_part_str is empty, but quantity_part_str had trailing letters (e.g. "600g")
+                if not unit_part_str and quantity_part_str[-1].isalpha():
+                    # Try to separate number and unit from quantity_part_str itself
+                    val_match = re.match(r"([\d\.]+)([a-zA-Z]+.*)", quantity_part_str)
+                    if val_match:
+                        quantity = float(val_match.group(1))
+                        unit = val_match.group(2)
+
+
+            except ValueError:
+                # Failed to parse quantity_part_str as a number,
+                # so the original_measure_str is likely a descriptive unit like "Pinch".
+                # Quantity remains 1.0, unit is original_measure_str.
+                quantity = 1.0
+                unit = original_measure_str
+        else:
+            # No leading number pattern found, assume descriptive unit.
+            quantity = 1.0
+            unit = original_measure_str
+            
+        if not unit.strip(): # Final check if unit became empty
+            unit = "unit"
+            
+        return quantity, unit
+
     def _estimate_calories(self, meal: MealDBMeal) -> Optional[int]:
         """
         Estimate calories based on meal category and ingredients count
@@ -119,10 +188,11 @@ class MealDBImportService:
             # Convert ingredients
             ingredients = []
             for mealdb_ingredient in meal.ingredients:
+                quantity, unit = self._parse_measure(mealdb_ingredient.measure)
                 ingredients.append(RecipeIngredientCreate(
                     ingredient_name=mealdb_ingredient.name,
-                    required_quantity=1.0,  # Default quantity since MealDB measures are often descriptive
-                    required_unit=mealdb_ingredient.measure or "unit"
+                    required_quantity=quantity,
+                    required_unit=unit
                 ))
             
             # Enhance instructions with additional info if available

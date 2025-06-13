@@ -9,6 +9,7 @@ class PantryItemBase(SQLModel):
     expiration_date: Optional[date] = None
     purchase_date: Optional[date] = None
     calories_per_unit: Optional[int] = None
+    image_url: Optional[str] = None
 
 class PantryItem(PantryItemBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -30,3 +31,4 @@ class PantryItemUpdate(SQLModel):
     expiration_date: Optional[date] = None
     purchase_date: Optional[date] = None
     calories_per_unit: Optional[int] = None
+    image_url: Optional[str] = None

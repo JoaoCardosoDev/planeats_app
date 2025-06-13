@@ -48,6 +48,7 @@ export default function AdicionarItens() {
   const [unit, setUnit] = useState("unidades")
   const [date, setDate] = useState<Date>()
   const [isLoading, setIsLoading] = useState(false)
+  const [isDemoLoading, setIsDemoLoading] = useState(false) // Loading state for demo items
   const [recentIngredients, setRecentIngredients] = useState<any[]>([])
 
   const router = useRouter()
@@ -88,8 +89,8 @@ export default function AdicionarItens() {
         item_name: name,
         quantity: quantityNum,
         unit: unit,
-        expiration_date: date ? date.toISOString().split('T')[0] : undefined, // Format as YYYY-MM-DD
-        purchase_date: new Date().toISOString().split('T')[0], // Today's date
+        expiration_date: date ? date.toISOString().split('T')[0] : undefined, 
+        purchase_date: new Date().toISOString().split('T')[0], 
       })
 
       toast.success("Ingrediente adicionado com sucesso!")
@@ -118,6 +119,80 @@ export default function AdicionarItens() {
     setName(ingredient.name)
     setCategory(ingredient.category as CategoryType)
   }
+
+  const addDays = (date: Date, days: number): Date => {
+    const result = new Date(date);
+    result.setDate(result.getDate() + days);
+    return result;
+  }
+
+  const demoPantryItems = [
+    { item_name: "Peito de Frango", quantity: 2, unit: "unidades", expiration_in_days: 7, purchase_date: new Date() },
+    { item_name: "Arroz Agulha", quantity: 1, unit: "kg", expiration_in_days: 365, purchase_date: new Date() },
+    { item_name: "Cebola", quantity: 3, unit: "unidades", expiration_in_days: 30, purchase_date: new Date() },
+    { item_name: "Alho", quantity: 1, unit: "cabeças", expiration_in_days: 60, purchase_date: new Date() },
+    { item_name: "Tomate Chucha", quantity: 5, unit: "unidades", expiration_in_days: 10, purchase_date: new Date() },
+    { item_name: "Azeite Virgem Extra", quantity: 500, unit: "mL", expiration_in_days: 365, purchase_date: new Date() },
+    { item_name: "Sal Marinho", quantity: 1, unit: "kg", expiration_in_days: 1000, purchase_date: new Date() },
+    { item_name: "Pimenta Preta Moída", quantity: 50, unit: "g", expiration_in_days: 365, purchase_date: new Date() },
+    { item_name: "Ovos Frescos (Classe M)", quantity: 12, unit: "unidades", expiration_in_days: 21, purchase_date: new Date() },
+    { item_name: "Leite Meio-Gordo", quantity: 1, unit: "L", expiration_in_days: 7, purchase_date: new Date() },
+    { item_name: "Queijo Cheddar Curado", quantity: 200, unit: "g", expiration_in_days: 30, purchase_date: new Date() },
+    { item_name: "Batata para Cozer", quantity: 1, unit: "kg", expiration_in_days: 30, purchase_date: new Date() },
+    { item_name: "Cenoura", quantity: 5, unit: "unidades", expiration_in_days: 14, purchase_date: new Date() },
+    { item_name: "Brócolos", quantity: 1, unit: "unidades", expiration_in_days: 7, purchase_date: new Date() },
+    { item_name: "Esparguete", quantity: 500, unit: "g", expiration_in_days: 730, purchase_date: new Date() },
+  ];
+
+  const handleAddDemoItems = async () => {
+    setIsDemoLoading(true);
+    toast.info("Adicionando ingredientes de demonstração...");
+
+    const creationPromises = demoPantryItems.map(item => {
+      const expirationDate = addDays(item.purchase_date, item.expiration_in_days);
+      return pantryAPI.createPantryItem({
+        item_name: item.item_name,
+        quantity: item.quantity,
+        unit: item.unit,
+        expiration_date: expirationDate.toISOString().split('T')[0],
+        purchase_date: item.purchase_date.toISOString().split('T')[0],
+      }).catch(err => ({ // Catch individual errors to allow Promise.allSettled to work
+        name: item.item_name, 
+        error: err
+      }));
+    });
+
+    const results = await Promise.allSettled(creationPromises);
+
+    let successCount = 0;
+    results.forEach(result => {
+      if (result.status === 'fulfilled' && !(result.value as any)?.error) {
+        successCount++;
+      } else if (result.status === 'fulfilled' && (result.value as any)?.error) {
+        const itemWithError = result.value as any;
+        toast.error(`Erro ao adicionar ${itemWithError.name}: ${itemWithError.error.message || 'Erro desconhecido'}`);
+        console.error(`Error adding demo item ${itemWithError.name}:`, itemWithError.error);
+      } else if (result.status === 'rejected') {
+        // This case might not be hit due to the .catch in map, but good for safety
+        toast.error(`Erro ao adicionar um item: ${result.reason?.message || 'Erro desconhecido'}`);
+        console.error("Error in Promise.allSettled for demo item:", result.reason);
+      }
+    });
+
+    if (successCount > 0) {
+      toast.success(`${successCount} de ${demoPantryItems.length} ingredientes de demonstração adicionados com sucesso!`);
+      loadRecentIngredients(); // Refresh recent items list
+    }
+    if (successCount < demoPantryItems.length && successCount > 0) {
+       toast.warning("Alguns ingredientes de demonstração não puderam ser adicionados.");
+    }
+    if (successCount === 0 && demoPantryItems.length > 0) {
+      toast.error("Nenhum ingrediente de demonstração pôde ser adicionado.");
+    }
+
+    setIsDemoLoading(false);
+  };
+
 
   // 100 dicas sobre organização de frigorífico e culinária
   const [currentTip, setCurrentTip] = useState(0)
@@ -355,6 +430,17 @@ export default function AdicionarItens() {
                     />
                   ))}
                 </div>
+                <Separator className="my-4" />
+                <Button 
+                  onClick={handleAddDemoItems} 
+                  className="w-full bg-blue-600 hover:bg-blue-700" 
+                  disabled={isDemoLoading}
+                >
+                  {isDemoLoading ? "Adicionando Mix..." : "Adicionar Mix de Demo"}
+                </Button>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Adiciona uma seleção de ingredientes comuns para demonstração.
+                </p>
               </CardContent>
             </Card>
 

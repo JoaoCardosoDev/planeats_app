@@ -83,9 +83,8 @@ class UserPreferenceRead(UserPreferenceBase):
 class UserPreferenceUpdate(SQLModel):
     daily_calorie_goal: Optional[int] = None
     dietary_restrictions: Optional[List[str]] = None
-    # preferred_cuisines is an alias for cuisine_preferences, which is the target field
-    # The frontend sends preferred_cuisines, so we accept it via alias.
-    cuisine_preferences: Optional[List[str]] = Field(default=None, alias="preferred_cuisines")
+    # Frontend now sends cuisine_preferences directly.
+    cuisine_preferences: Optional[List[str]] = None # Removed alias="preferred_cuisines"
     disliked_ingredients: Optional[List[str]] = None
     notification_preferences: Optional[Dict[str, Any]] = None
     preferred_difficulty: Optional[str] = None

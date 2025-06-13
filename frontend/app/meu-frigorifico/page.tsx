@@ -234,12 +234,15 @@ function MeuFrigorificoContent() {
                           <div className="flex items-center">
                             <div className="relative h-24 w-24 shrink-0 bg-gray-100 flex items-center justify-center rounded-l-md">
                               <Image
-                                src={mealDbApi.public().getIngredientImageUrl(ingredient.item_name, 'small')}
+                                src={ingredient.image_url || '/placeholder-logo.svg'}
                                 alt={ingredient.item_name}
                                 fill
                                 className="object-contain p-1"
                                 onError={(e) => {
-                                  (e.currentTarget as HTMLImageElement).src = `/placeholder.svg?text=${encodeURIComponent(ingredient.item_name.substring(0,3))}&height=64&width=64`;
+                                  // If ingredient.image_url fails, or if it was initially undefined, show the static placeholder logo
+                                  (e.currentTarget as HTMLImageElement).src = '/placeholder-logo.svg';
+                                  // To prevent infinite loop if placeholder itself fails
+                                  e.currentTarget.onerror = null; 
                                 }}
                               />
                             </div>

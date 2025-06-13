@@ -187,7 +187,6 @@ export default function RecipeDetail({ params }: { params: { id: string } }) {
           </Button>
           <div className="flex-1">
             <h1 className="text-3xl font-bold">{recipe.recipe_name}</h1>
-            <p className="text-muted-foreground">{recipe.instructions.substring(0, 200)}...</p>
           </div>
         </div>
 

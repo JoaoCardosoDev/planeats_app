@@ -298,9 +298,8 @@ This project is developed for academic purposes at ETIC Algarve. All rights rese
 For development issues or questions:
 
 1. Check the [API Documentation](http://localhost:8000/docs) when running locally
-2. Review the project documentation in the `memory-bank/` directory
-3. Check container logs: `make logs`
-4. Verify environment setup: ensure all required variables are set in `.env`
+2. Check container logs: `make logs`
+3. Verify environment setup: ensure all required variables are set in `.env`
 
 ---
 

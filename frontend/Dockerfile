@@ -1,24 +1,33 @@
-# Builder stage
-FROM node:18-alpine AS builder
-WORKDIR /usr/src/app
-COPY package*.json ./
-# Ensure package-lock.json or yarn.lock is also copied if present
-# For npm, it's usually package.json and package-lock.json
-# If using yarn, it would be package.json and yarn.lock
-RUN npm install
-COPY . .
-RUN npm run build
+# ---- Builder Stage ----
+FROM node:20-alpine AS builder
+WORKDIR /app
 
-# Final stage
-FROM node:18-alpine
-WORKDIR /usr/src/app
-COPY --from=builder /usr/src/app/.next ./.next
-COPY --from=builder /usr/src/app/public ./public
-COPY --from=builder /usr/src/app/package.json ./package.json
-# next.config.js might not exist initially for a barebones Next.js app,
-# but it's good to include if planned.
-# If it's optional, the COPY command might fail if the file doesn't exist in builder.
-# Consider making this copy conditional or ensuring next.config.js is created.
-COPY --from=builder /usr/src/app/next.config.js ./next.config.js
+RUN npm install -g pnpm
+
+COPY package.json pnpm-lock.yaml* ./
+
+RUN pnpm install
+
+COPY . .
+
+RUN pnpm build
+
+# ---- Runner Stage ----
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV PORT=3000
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+
+USER nextjs
+
 EXPOSE 3000
-CMD ["npm", "start"]
+
+CMD ["node", "server.js"]

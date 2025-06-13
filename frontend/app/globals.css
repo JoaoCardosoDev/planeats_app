@@ -1,0 +1,219 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 142.1 76.2% 36.3%; /* Verde PlanEats */
+    --primary-foreground: 0 0% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 45 93% 47%; /* Âmbar PlanEats */
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 142.1 76.2% 36.3%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 142.1 70.6% 45.3%;
+    --primary-foreground: 144.9 80.4% 10%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 45 93% 47%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 142.4 71.8% 29.2%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-gray-200;
+  }
+  body {
+    @apply bg-white text-gray-900;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  
+  .dark * {
+    @apply border-gray-700;
+  }
+  
+  .dark body {
+    @apply bg-gray-900 text-gray-100;
+  }
+}
+
+/* Estilos customizados para PlanEats */
+@layer components {
+  .planeats-gradient-bg {
+    @apply bg-gradient-to-br from-green-50 via-white to-amber-50;
+  }
+  
+  .planeats-card {
+    @apply bg-white border border-green-200 shadow-sm hover:shadow-md transition-shadow duration-200;
+  }
+  
+  .planeats-btn-primary {
+    @apply bg-green-600 hover:bg-green-700 text-white font-medium shadow-sm transition-colors duration-200;
+  }
+  
+  .planeats-btn-secondary {
+    @apply bg-amber-500 hover:bg-amber-600 text-white font-medium shadow-sm transition-colors duration-200;
+  }
+  
+  .planeats-text-primary {
+    @apply text-green-700;
+  }
+  
+  .planeats-text-secondary {
+    @apply text-green-600;
+  }
+  
+  .planeats-text-accent {
+    @apply text-amber-500;
+  }
+  
+  .planeats-border {
+    @apply border-green-200;
+  }
+  
+  .planeats-focus {
+    @apply focus:ring-2 focus:ring-green-400 focus:border-green-400;
+  }
+}
+
+/* Animações customizadas */
+@layer utilities {
+  /* Animação de fade-in com movimento para cima */
+  .animate-fade-in-up {
+    animation: fadeInUp 1s ease-out forwards;
+  }
+  
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  /* Animação de scroll fade-in - Simplified to always show content */
+  .scroll-fade-in {
+    opacity: 1;
+    transform: translateY(0);
+    transition: all 0.6s ease-out;
+  }
+  
+  .scroll-fade-in.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  
+  /* Animação de hover suave para cards */
+  .hover-lift {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  }
+  
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Animação de pulso suave */
+  .pulse-soft {
+    animation: pulseSoft 2s infinite;
+  }
+  
+  @keyframes pulseSoft {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.8;
+    }
+  }
+
+  /* Card hover effects */
+  .card-hover {
+    transition: all 0.3s ease-in-out;
+  }
+  
+  .card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  }
+
+  /* Image hover effects */
+  .image-hover {
+    transition: transform 0.7s ease-in-out;
+  }
+  
+  .image-hover:hover {
+    transform: scale(1.05);
+  }
+
+  /* Button styles */
+  .btn-primary {
+    @apply bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-lg shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5;
+  }
+
+  .btn-outline {
+    @apply border-2 border-green-600 text-green-600 hover:bg-green-600 hover:text-white font-semibold px-6 py-3 rounded-lg transition-all duration-300;
+  }
+
+  /* Stagger animation for grid items */
+  .stagger-item {
+    animation: fadeInUp 0.8s ease-out forwards;
+  }
+  
+  .stagger-item:nth-child(1) {
+    animation-delay: 0.1s;
+  }
+  
+  .stagger-item:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+  
+  .stagger-item:nth-child(3) {
+    animation-delay: 0.3s;
+  }
+  
+  .stagger-item:nth-child(4) {
+    animation-delay: 0.4s;
+  }
+  
+  .stagger-item:nth-child(5) {
+    animation-delay: 0.5s;
+  }
+  
+  .stagger-item:nth-child(6) {
+    animation-delay: 0.6s;
+  }
+}
